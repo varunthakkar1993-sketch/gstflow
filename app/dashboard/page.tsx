@@ -2,9 +2,8 @@
 
 import { useEffect, useState } from 'react';
 import { onAuthStateChanged, signOut } from 'firebase/auth';
-import { auth } from '../../lib/firebase';
+import { auth, db } from '../../lib/firebase';
 import { collection, query, where, getDocs, orderBy } from 'firebase/firestore';
-import { db } from '../../lib/firebase';
 import Link from 'next/link';
 
 export default function Dashboard() {
@@ -17,12 +16,11 @@ export default function Dashboard() {
       if (currentUser) {
         setUser(currentUser);
         try {
-          const q = query(collection(db, "invoices"), where("userId", "==", currentUser.uid), orderBy("createdAt", "desc"));
-          const querySnapshot = await getDocs(q);
-          const userInvoices = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-          setInvoices(userInvoices);
+          const q = query(collection(db, 'invoices'), where('userId', '==', currentUser.uid), orderBy('createdAt', 'desc'));
+          const snap = await getDocs(q);
+          setInvoices(snap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
         } catch (err: any) {
-          console.error("Firestore error:", err?.message);
+          console.error('Firestore error:', err?.message);
           setInvoices([]);
         }
       } else {
@@ -30,70 +28,232 @@ export default function Dashboard() {
       }
       setLoading(false);
     });
-
     return () => unsubscribe();
   }, []);
+
+  const totalRevenue = invoices.reduce((sum, inv) => sum + (inv.total || 0), 0);
+  const thisMonth = invoices.filter(inv => {
+    if (!inv.date) return false;
+    const d = new Date(inv.date);
+    const now = new Date();
+    return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
+  });
+  const thisMonthRevenue = thisMonth.reduce((sum, inv) => sum + (inv.total || 0), 0);
 
   const handleLogout = async () => {
     await signOut(auth);
     window.location.href = '/';
   };
 
-  if (loading) return <div className="p-8 text-center">Loading...</div>;
+  if (loading) return (
+    <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#f0f4ff' }}>
+      <div style={{ textAlign: 'center' }}>
+        <div style={{ width: 40, height: 40, border: '3px solid #2563eb', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.8s linear infinite', margin: '0 auto 16px' }} />
+        <p style={{ color: '#6b7280', fontFamily: 'Georgia, serif' }}>Loading your workspace…</p>
+      </div>
+      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+    </div>
+  );
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <nav className="bg-white border-b">
-        <div className="max-w-6xl mx-auto px-6 py-4 flex justify-between items-center">
-          <div className="text-2xl font-bold">GSTFlow</div>
-          <div className="flex items-center gap-6">
-            <span className="text-sm text-gray-600">{user?.email}</span>
-            <button onClick={handleLogout} className="text-sm text-red-600 hover:text-red-700">Logout</button>
+    <>
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Lora:wght@400;500;600&family=DM+Sans:wght@300;400;500;600&display=swap');
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { background: #f0f4ff; }
+        .dash-root { display: flex; min-height: 100vh; font-family: 'DM Sans', sans-serif; background: #f0f4ff; }
+        .sidebar { width: 240px; background: #0f1f5c; min-height: 100vh; display: flex; flex-direction: column; position: fixed; left: 0; top: 0; bottom: 0; z-index: 10; }
+        .sidebar-logo { padding: 28px 24px 24px; border-bottom: 1px solid rgba(255,255,255,0.08); }
+        .sidebar-logo h1 { font-family: 'Lora', serif; font-size: 22px; color: #fff; font-weight: 600; letter-spacing: -0.3px; }
+        .sidebar-logo p { font-size: 11px; color: rgba(255,255,255,0.4); margin-top: 2px; letter-spacing: 0.5px; text-transform: uppercase; }
+        .sidebar-nav { padding: 20px 12px; flex: 1; }
+        .nav-label { font-size: 10px; color: rgba(255,255,255,0.3); letter-spacing: 1px; text-transform: uppercase; padding: 0 12px; margin-bottom: 8px; margin-top: 16px; }
+        .nav-item { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 8px; color: rgba(255,255,255,0.6); font-size: 13.5px; font-weight: 400; text-decoration: none; transition: all 0.15s; cursor: pointer; border: none; background: none; width: 100%; text-align: left; }
+        .nav-item:hover { background: rgba(255,255,255,0.08); color: #fff; }
+        .nav-item.active { background: rgba(99,130,255,0.2); color: #fff; font-weight: 500; }
+        .nav-item svg { opacity: 0.7; flex-shrink: 0; }
+        .nav-item.active svg { opacity: 1; }
+        .sidebar-footer { padding: 16px 12px; border-top: 1px solid rgba(255,255,255,0.08); }
+        .user-chip { display: flex; align-items: center; gap: 10px; padding: 8px 12px; }
+        .user-avatar { width: 32px; height: 32px; background: linear-gradient(135deg, #6382ff, #3b5bdb); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #fff; font-size: 13px; font-weight: 600; flex-shrink: 0; }
+        .user-email { font-size: 11.5px; color: rgba(255,255,255,0.5); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .logout-btn { display: flex; align-items: center; gap: 8px; padding: 8px 12px; color: rgba(255,255,255,0.4); font-size: 12px; cursor: pointer; border: none; background: none; width: 100%; border-radius: 6px; transition: all 0.15s; margin-top: 4px; }
+        .logout-btn:hover { color: #ff6b6b; background: rgba(255,107,107,0.1); }
+        .main { margin-left: 240px; flex: 1; padding: 36px 40px; }
+        .page-header { margin-bottom: 32px; }
+        .page-header h2 { font-family: 'Lora', serif; font-size: 26px; color: #0f1f5c; font-weight: 600; }
+        .page-header p { color: #6b7280; font-size: 14px; margin-top: 4px; }
+        .stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 32px; }
+        .stat-card { background: #fff; border-radius: 12px; padding: 20px 24px; border: 1px solid #e5e9f5; position: relative; overflow: hidden; }
+        .stat-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px; }
+        .stat-card.blue::before { background: #2563eb; }
+        .stat-card.indigo::before { background: #4f46e5; }
+        .stat-card.sky::before { background: #0ea5e9; }
+        .stat-card.violet::before { background: #7c3aed; }
+        .stat-label { font-size: 11.5px; color: #9ca3af; text-transform: uppercase; letter-spacing: 0.6px; font-weight: 500; }
+        .stat-value { font-family: 'Lora', serif; font-size: 28px; color: #0f1f5c; font-weight: 600; margin-top: 6px; letter-spacing: -0.5px; }
+        .stat-sub { font-size: 12px; color: #9ca3af; margin-top: 4px; }
+        .section-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
+        .section-title { font-family: 'Lora', serif; font-size: 17px; color: #0f1f5c; font-weight: 600; }
+        .new-btn { display: inline-flex; align-items: center; gap: 6px; background: #2563eb; color: #fff; padding: 9px 18px; border-radius: 8px; font-size: 13px; font-weight: 500; text-decoration: none; transition: background 0.15s; }
+        .new-btn:hover { background: #1d4ed8; }
+        .invoice-table { background: #fff; border-radius: 12px; border: 1px solid #e5e9f5; overflow: hidden; }
+        .table-head { display: grid; grid-template-columns: 1fr 2fr 1.5fr 1fr 1fr; gap: 16px; padding: 12px 24px; background: #f8faff; border-bottom: 1px solid #e5e9f5; }
+        .th { font-size: 11px; color: #9ca3af; text-transform: uppercase; letter-spacing: 0.7px; font-weight: 600; }
+        .table-row { display: grid; grid-template-columns: 1fr 2fr 1.5fr 1fr 1fr; gap: 16px; padding: 16px 24px; border-bottom: 1px solid #f3f4f6; align-items: center; transition: background 0.1s; }
+        .table-row:last-child { border-bottom: none; }
+        .table-row:hover { background: #f8faff; }
+        .inv-number { font-size: 13px; font-weight: 600; color: #2563eb; }
+        .inv-client { font-size: 13.5px; color: #111827; font-weight: 500; }
+        .inv-client-email { font-size: 11.5px; color: #9ca3af; margin-top: 1px; }
+        .inv-amount { font-size: 14px; font-weight: 600; color: #111827; font-family: 'Lora', serif; }
+        .inv-date { font-size: 12.5px; color: #6b7280; }
+        .status-badge { display: inline-flex; align-items: center; gap: 5px; padding: 3px 10px; border-radius: 20px; font-size: 11.5px; font-weight: 500; }
+        .status-badge.paid { background: #dcfce7; color: #16a34a; }
+        .status-badge.sent { background: #dbeafe; color: #1d4ed8; }
+        .empty-state { padding: 60px 24px; text-align: center; }
+        .empty-icon { width: 56px; height: 56px; background: #eff6ff; border-radius: 14px; display: flex; align-items: center; justify-content: center; margin: 0 auto 16px; }
+        .empty-title { font-family: 'Lora', serif; font-size: 17px; color: #0f1f5c; font-weight: 600; margin-bottom: 6px; }
+        .empty-sub { font-size: 13.5px; color: #9ca3af; margin-bottom: 20px; }
+        .quick-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 32px; }
+        .action-card { background: #fff; border: 1px solid #e5e9f5; border-radius: 12px; padding: 20px 24px; display: flex; align-items: center; gap: 16px; text-decoration: none; transition: all 0.15s; }
+        .action-card:hover { border-color: #2563eb; box-shadow: 0 0 0 3px rgba(37,99,235,0.08); }
+        .action-icon { width: 42px; height: 42px; border-radius: 10px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+        .action-title { font-size: 14px; font-weight: 600; color: #0f1f5c; }
+        .action-sub { font-size: 12px; color: #9ca3af; margin-top: 2px; }
+      `}</style>
+
+      <div className="dash-root">
+        <aside className="sidebar">
+          <div className="sidebar-logo">
+            <h1>GSTFlow</h1>
+            <p>Invoice Manager</p>
           </div>
-        </div>
-      </nav>
-
-      <div className="max-w-6xl mx-auto px-6 py-12">
-        <h1 className="text-4xl font-bold mb-8">Welcome back, {user?.email?.split('@')[0]}</h1>
-        
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <Link href="/editor" className="block">
-            <div className="bg-white p-8 rounded-2xl shadow-sm border hover:shadow-md transition cursor-pointer">
-              <h3 className="font-semibold text-xl mb-4">Create New Invoice</h3>
-              <button className="w-full bg-black text-white py-4 rounded-xl hover:bg-gray-800">Start Fresh Invoice</button>
+          <nav className="sidebar-nav">
+            <div className="nav-label">Main</div>
+            <a href="/dashboard" className="nav-item active">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+              Dashboard
+            </a>
+            <a href="/editor" className="nav-item">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/></svg>
+              New Invoice
+            </a>
+            <div className="nav-label">Settings</div>
+            <a href="/profile" className="nav-item">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+              Business Profile
+            </a>
+            <a href="/templates" className="nav-item">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg>
+              Templates
+            </a>
+          </nav>
+          <div className="sidebar-footer">
+            <div className="user-chip">
+              <div className="user-avatar">{user?.email?.[0]?.toUpperCase()}</div>
+              <div className="user-email">{user?.email}</div>
             </div>
-          </Link>
+            <button onClick={handleLogout} className="logout-btn">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+              Sign out
+            </button>
+          </div>
+        </aside>
 
-          <Link href="/templates" className="block">
-            <div className="bg-white p-8 rounded-2xl shadow-sm border hover:shadow-md transition cursor-pointer">
-              <h3 className="font-semibold text-xl mb-4">Browse Templates</h3>
-              <button className="block w-full text-center border border-gray-300 py-4 rounded-xl hover:bg-gray-50">View All Templates →</button>
+        <main className="main">
+          <div className="page-header">
+            <h2>Good {new Date().getHours() < 12 ? 'morning' : new Date().getHours() < 17 ? 'afternoon' : 'evening'}, {user?.email?.split('@')[0]} 👋</h2>
+            <p>Here's what's happening with your invoices.</p>
+          </div>
+
+          <div className="stats-grid">
+            <div className="stat-card blue">
+              <div className="stat-label">Total Revenue</div>
+              <div className="stat-value">Rs. {totalRevenue.toLocaleString('en-IN')}</div>
+              <div className="stat-sub">All time</div>
             </div>
-          </Link>
+            <div className="stat-card indigo">
+              <div className="stat-label">This Month</div>
+              <div className="stat-value">Rs. {thisMonthRevenue.toLocaleString('en-IN')}</div>
+              <div className="stat-sub">{thisMonth.length} invoice{thisMonth.length !== 1 ? 's' : ''}</div>
+            </div>
+            <div className="stat-card sky">
+              <div className="stat-label">Total Invoices</div>
+              <div className="stat-value">{invoices.length}</div>
+              <div className="stat-sub">All time</div>
+            </div>
+            <div className="stat-card violet">
+              <div className="stat-label">Avg. Invoice</div>
+              <div className="stat-value">Rs. {invoices.length ? Math.round(totalRevenue / invoices.length).toLocaleString('en-IN') : '0'}</div>
+              <div className="stat-sub">Per invoice</div>
+            </div>
+          </div>
 
-          <div className="bg-white p-8 rounded-2xl shadow-sm border">
-            <h3 className="font-semibold text-xl mb-4">My Invoices ({invoices.length})</h3>
-            {invoices.length === 0 ? (
-              <p className="text-gray-500">No invoices yet.<br/>Create one from the left panel!</p>
-            ) : (
-              <div className="space-y-4 max-h-96 overflow-auto">
-                {invoices.map((inv) => (
-                  <div key={inv.id} className="flex justify-between text-sm border-b pb-3">
-                    <div>
-                      <span className="font-medium">{inv.invoiceNumber}</span><br />
-                      <span className="text-gray-500">{inv.clientName}</span>
-                    </div>
-                    <div className="text-right">
-                      <span className="font-medium">₹ {inv.total}</span><br />
-                      <span className="text-gray-500 text-xs">{inv.date}</span>
-                    </div>
-                  </div>
-                ))}
+          <div className="quick-actions">
+            <a href="/editor" className="action-card">
+              <div className="action-icon" style={{ background: '#eff6ff' }}>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#2563eb" strokeWidth="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/></svg>
               </div>
+              <div>
+                <div className="action-title">Create New Invoice</div>
+                <div className="action-sub">Generate a GST-compliant invoice</div>
+              </div>
+            </a>
+            <a href="/profile" className="action-card">
+              <div className="action-icon" style={{ background: '#f5f3ff' }}>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#7c3aed" strokeWidth="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+              </div>
+              <div>
+                <div className="action-title">Business Profile</div>
+                <div className="action-sub">Update your business details</div>
+              </div>
+            </a>
+          </div>
+
+          <div className="section-header">
+            <div className="section-title">Recent Invoices</div>
+            <a href="/editor" className="new-btn">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+              New Invoice
+            </a>
+          </div>
+
+          <div className="invoice-table">
+            <div className="table-head">
+              <div className="th">#</div>
+              <div className="th">Client</div>
+              <div className="th">Amount</div>
+              <div className="th">Date</div>
+              <div className="th">Status</div>
+            </div>
+
+            {invoices.length === 0 ? (
+              <div className="empty-state">
+                <div className="empty-icon">
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#2563eb" strokeWidth="1.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                </div>
+                <div className="empty-title">No invoices yet</div>
+                <div className="empty-sub">Create your first invoice to get started</div>
+                <a href="/editor" className="new-btn" style={{ margin: '0 auto', display: 'inline-flex' }}>Create Invoice</a>
+              </div>
+            ) : (
+              invoices.map((inv) => (
+                <div key={inv.id} className="table-row">
+                  <div className="inv-number">{inv.invoiceNumber}</div>
+                  <div>
+                    <div className="inv-client">{inv.clientName || '—'}</div>
+                    <div className="inv-client-email">{inv.clientEmail || ''}</div>
+                  </div>
+                  <div className="inv-amount">Rs. {(inv.total || 0).toLocaleString('en-IN')}</div>
+                  <div className="inv-date">{inv.date || '—'}</div>
+                  <div><span className="status-badge sent">Sent</span></div>
+                </div>
+              ))
             )}
           </div>
-        </div>
+        </main>
       </div>
-    </div>
+    </>
   );
 }
