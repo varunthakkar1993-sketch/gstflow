@@ -54,77 +54,140 @@ export default function InvoiceEditor() {
   const buildPDF = async () => {
     const doc2 = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
     const pageWidth = doc2.internal.pageSize.getWidth();
-    // Logo
+    const pageHeight = doc2.internal.pageSize.getHeight();
+
+    // Dark header band
+    doc2.setFillColor(15, 31, 92);
+    doc2.rect(0, 0, pageWidth, 42, 'F');
+
+    // Logo in header
     if (profile?.logoBase64) {
       try {
         const ext = profile.logoBase64.startsWith('data:image/png') ? 'PNG' : 'JPEG';
-        doc2.addImage(profile.logoBase64, ext, 20, 15, 0, 18);
+        doc2.addImage(profile.logoBase64, ext, 12, 8, 0, 26);
       } catch (e) {}
     }
-    doc2.setFontSize(20); doc2.setFont('helvetica', 'bold');
-    doc2.text(profile?.businessName || 'Your Business', profile?.logoBase64 ? 20 : 20, profile?.logoBase64 ? 38 : 22);
-    doc2.setFontSize(9); doc2.setFont('helvetica', 'normal');
-    if (profile?.address) doc2.text(`${profile.address}, ${profile.city}, ${profile.state} - ${profile.pincode}`, 20, 29);
-    if (profile?.gstin) doc2.text(`GSTIN: ${profile.gstin}`, 20, 35);
-    if (profile?.phone) doc2.text(`Phone: ${profile.phone}`, 20, 41);
+
+    // INVOICE label in header top-right
     doc2.setFontSize(22); doc2.setFont('helvetica', 'bold');
-    doc2.text('INVOICE', pageWidth - 20, 22, { align: 'right' });
-    doc2.setFontSize(9); doc2.setFont('helvetica', 'normal');
-    doc2.text(`Invoice #: ${invoiceData.invoiceNumber}`, pageWidth - 20, 30, { align: 'right' });
-    doc2.text(`Date: ${invoiceData.date}`, pageWidth - 20, 36, { align: 'right' });
-    doc2.setLineWidth(0.8); doc2.line(20, 50, pageWidth - 20, 50);
-    let y = 60;
-    doc2.setFontSize(10); doc2.setFont('helvetica', 'bold');
-    doc2.text('Bill To:', 20, y); y += 7;
-    doc2.setFont('helvetica', 'normal');
-    doc2.text(invoiceData.clientName || 'Client Name', 20, y); y += 6;
-    if (invoiceData.clientEmail) { doc2.text(invoiceData.clientEmail, 20, y); y += 6; }
-    if (invoiceData.clientAddress) { doc2.text(invoiceData.clientAddress, 20, y); y += 6; }
-    if (invoiceData.clientGSTIN) { doc2.text(`GSTIN: ${invoiceData.clientGSTIN}`, 20, y); y += 6; }
+    doc2.setTextColor(255, 255, 255);
+    doc2.text('INVOICE', pageWidth - 14, 24, { align: 'right' });
+    doc2.setFontSize(8); doc2.setFont('helvetica', 'normal');
+    doc2.setTextColor(180, 195, 230);
+    doc2.text(`${invoiceData.invoiceNumber}  ·  ${invoiceData.date}`, pageWidth - 14, 32, { align: 'right' });
+
+    // Business info below header
+    let y = 54;
+    doc2.setFontSize(13); doc2.setFont('helvetica', 'bold');
+    doc2.setTextColor(15, 31, 92);
+    doc2.text(profile?.businessName || 'Your Business', 14, y); y += 6;
+    doc2.setFontSize(8); doc2.setFont('helvetica', 'normal');
+    doc2.setTextColor(100, 110, 130);
+    if (profile?.address) { doc2.text(`${profile.address}, ${profile.city}, ${profile.state} - ${profile.pincode}`, 14, y); y += 5; }
+    if (profile?.gstin) { doc2.text(`GSTIN: ${profile.gstin}`, 14, y); y += 5; }
+    if (profile?.phone) { doc2.text(`Phone: ${profile.phone}`, 14, y); y += 5; }
+
+    // Blue accent line
+    y += 3;
+    doc2.setDrawColor(37, 99, 235);
+    doc2.setLineWidth(0.5);
+    doc2.line(14, y, pageWidth - 14, y);
     y += 8;
-    doc2.setFont('helvetica', 'bold'); doc2.setFontSize(10);
-    doc2.text('Description', 20, y);
-    doc2.text('Amount (Rs.)', pageWidth - 20, y, { align: 'right' });
-    y += 5; doc2.setLineWidth(0.3); doc2.line(20, y, pageWidth - 20, y); y += 7;
-    doc2.setFont('helvetica', 'normal');
-    doc2.text(invoiceData.description, 20, y);
-    doc2.text(subtotal.toLocaleString('en-IN'), pageWidth - 20, y, { align: 'right' }); y += 10;
-    doc2.line(20, y, pageWidth - 20, y); y += 7;
-    doc2.setFont('helvetica', 'bold');
+
+    // Bill To / Invoice Details two columns
+    doc2.setFontSize(7.5); doc2.setFont('helvetica', 'bold');
+    doc2.setTextColor(100, 110, 130);
+    doc2.text('BILL TO', 14, y);
+    doc2.text('INVOICE DETAILS', pageWidth / 2, y);
+    y += 5;
+
+    doc2.setFont('helvetica', 'bold'); doc2.setFontSize(9.5);
+    doc2.setTextColor(15, 31, 92);
+    doc2.text(invoiceData.clientName || 'Client', 14, y);
+    doc2.setFont('helvetica', 'normal'); doc2.setFontSize(8.5);
+    doc2.setTextColor(60, 70, 90);
+    doc2.text(`Invoice #: ${invoiceData.invoiceNumber}`, pageWidth / 2, y); y += 5;
+    doc2.setTextColor(100, 110, 130); doc2.setFontSize(8);
+    if (invoiceData.clientEmail) { doc2.text(invoiceData.clientEmail, 14, y); }
+    doc2.setTextColor(60, 70, 90);
+    doc2.text(`Date: ${invoiceData.date}`, pageWidth / 2, y); y += 5;
+    doc2.setTextColor(100, 110, 130);
+    if (invoiceData.clientAddress) { doc2.text(invoiceData.clientAddress, 14, y); y += 5; }
+    if (invoiceData.clientGSTIN) { doc2.text(`GSTIN: ${invoiceData.clientGSTIN}`, 14, y); y += 5; }
+
+    // Items table header
+    y += 5;
+    doc2.setFillColor(240, 244, 255);
+    doc2.rect(14, y - 4, pageWidth - 28, 10, 'F');
+    doc2.setFontSize(8); doc2.setFont('helvetica', 'bold');
+    doc2.setTextColor(15, 31, 92);
+    doc2.text('DESCRIPTION', 18, y + 2);
+    doc2.text('AMOUNT (Rs.)', pageWidth - 18, y + 2, { align: 'right' });
+    y += 12;
+
+    // Item row
+    doc2.setFont('helvetica', 'normal'); doc2.setFontSize(9);
+    doc2.setTextColor(30, 40, 60);
+    doc2.text(invoiceData.description, 18, y);
+    doc2.text(subtotal.toLocaleString('en-IN'), pageWidth - 18, y, { align: 'right' });
+    y += 8;
+
+    // Tax rows
+    doc2.setDrawColor(220, 225, 235);
+    doc2.setLineWidth(0.3);
+    doc2.line(14, y, pageWidth - 14, y); y += 6;
+    doc2.setFontSize(8.5); doc2.setTextColor(100, 110, 130);
     if (isIntra) {
-      doc2.text(`CGST (${parseFloat(invoiceData.gstRate) / 2}%)`, 20, y);
-      doc2.text(taxAmount.toFixed(2), pageWidth - 20, y, { align: 'right' }); y += 7;
-      doc2.text(`SGST (${parseFloat(invoiceData.gstRate) / 2}%)`, 20, y);
-      doc2.text(taxAmount.toFixed(2), pageWidth - 20, y, { align: 'right' }); y += 7;
+      doc2.text(`CGST (${parseFloat(invoiceData.gstRate) / 2}%)`, 18, y);
+      doc2.text(`Rs. ${taxAmount.toFixed(2)}`, pageWidth - 18, y, { align: 'right' }); y += 6;
+      doc2.text(`SGST (${parseFloat(invoiceData.gstRate) / 2}%)`, 18, y);
+      doc2.text(`Rs. ${taxAmount.toFixed(2)}`, pageWidth - 18, y, { align: 'right' }); y += 6;
     } else {
-      doc2.text(`IGST (${invoiceData.gstRate}%)`, 20, y);
-      doc2.text(taxAmount.toFixed(2), pageWidth - 20, y, { align: 'right' }); y += 7;
+      doc2.text(`IGST (${invoiceData.gstRate}%)`, 18, y);
+      doc2.text(`Rs. ${taxAmount.toFixed(2)}`, pageWidth - 18, y, { align: 'right' }); y += 6;
     }
-    doc2.setLineWidth(0.8); doc2.line(20, y, pageWidth - 20, y); y += 8;
-    doc2.setFontSize(12);
-    doc2.text('Total', 20, y);
-    doc2.text(`Rs. ${total.toLocaleString('en-IN')}`, pageWidth - 20, y, { align: 'right' }); y += 16;
+
+    // Total band
+    y += 2;
+    doc2.setFillColor(15, 31, 92);
+    doc2.rect(14, y, pageWidth - 28, 12, 'F');
+    doc2.setFontSize(11); doc2.setFont('helvetica', 'bold');
+    doc2.setTextColor(255, 255, 255);
+    doc2.text('TOTAL', 18, y + 8);
+    doc2.text(`Rs. ${total.toLocaleString('en-IN')}`, pageWidth - 18, y + 8, { align: 'right' });
+    y += 20;
+
+    // Bank details
     if (profile?.bankName) {
-      doc2.setFontSize(10); doc2.setFont('helvetica', 'bold');
-      doc2.text('Bank Details:', 20, y); y += 7;
-      doc2.setFont('helvetica', 'normal');
-      doc2.text(`Bank: ${profile.bankName}`, 20, y); y += 6;
-      doc2.text(`Account Holder: ${profile.accountHolder}`, 20, y); y += 6;
-      doc2.text(`Account No: ${profile.accountNumber}`, 20, y); y += 6;
-      doc2.text(`IFSC: ${profile.ifscCode}`, 20, y); y += 10;
+      doc2.setFontSize(7.5); doc2.setFont('helvetica', 'bold');
+      doc2.setTextColor(100, 110, 130);
+      doc2.text('BANK DETAILS', 14, y); y += 5;
+      doc2.setFont('helvetica', 'normal'); doc2.setFontSize(8.5);
+      doc2.setTextColor(30, 40, 60);
+      doc2.text(`${profile.bankName}  ·  A/C: ${profile.accountNumber}  ·  IFSC: ${profile.ifscCode}  ·  ${profile.accountHolder}`, 14, y); y += 10;
     }
+
+    // UPI QR
     if (profile?.upiId) {
-      doc2.setFont('helvetica', 'bold'); doc2.setFontSize(10);
-      doc2.text('Pay via UPI:', 20, y); y += 7;
+      doc2.setFontSize(7.5); doc2.setFont('helvetica', 'bold');
+      doc2.setTextColor(100, 110, 130);
+      doc2.text('PAY VIA UPI', 14, y); y += 5;
       const upiLink = `upi://pay?pa=${profile.upiId}&pn=${encodeURIComponent(profile.businessName || '')}&am=${total.toFixed(2)}&cu=INR`;
       const qrDataUrl = await QRCode.toDataURL(upiLink, { width: 200, margin: 1 });
-      doc2.addImage(qrDataUrl, 'PNG', 20, y, 40, 40);
-      doc2.setFont('helvetica', 'normal');
-      doc2.text(profile.upiId, 65, y + 20); y += 48;
+      doc2.addImage(qrDataUrl, 'PNG', 14, y, 32, 32);
+      doc2.setFontSize(8.5); doc2.setFont('helvetica', 'normal');
+      doc2.setTextColor(30, 40, 60);
+      doc2.text(profile.upiId, 50, y + 16); y += 38;
     }
-    doc2.setFontSize(9); doc2.setFont('helvetica', 'normal');
-    doc2.text('Thank you for your business!', 20, y);
-    doc2.text('Made with GSTFlow.in', 20, y + 6);
+
+    // Footer band
+    doc2.setFillColor(240, 244, 255);
+    doc2.rect(0, pageHeight - 14, pageWidth, 14, 'F');
+    doc2.setFontSize(8); doc2.setFont('helvetica', 'normal');
+    doc2.setTextColor(100, 110, 130);
+    doc2.text('Thank you for your business!', 14, pageHeight - 6);
+    doc2.text('Made with GSTFlow.in', pageWidth - 14, pageHeight - 6, { align: 'right' });
+
     return doc2;
   };
 
