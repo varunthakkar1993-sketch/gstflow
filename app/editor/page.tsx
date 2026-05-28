@@ -54,8 +54,15 @@ export default function InvoiceEditor() {
   const buildPDF = async () => {
     const doc2 = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
     const pageWidth = doc2.internal.pageSize.getWidth();
+    // Logo
+    if (profile?.logoBase64) {
+      try {
+        const ext = profile.logoBase64.startsWith('data:image/png') ? 'PNG' : 'JPEG';
+        doc2.addImage(profile.logoBase64, ext, 20, 15, 0, 18);
+      } catch (e) {}
+    }
     doc2.setFontSize(20); doc2.setFont('helvetica', 'bold');
-    doc2.text(profile?.businessName || 'Your Business', 20, 22);
+    doc2.text(profile?.businessName || 'Your Business', profile?.logoBase64 ? 20 : 20, profile?.logoBase64 ? 38 : 22);
     doc2.setFontSize(9); doc2.setFont('helvetica', 'normal');
     if (profile?.address) doc2.text(`${profile.address}, ${profile.city}, ${profile.state} - ${profile.pincode}`, 20, 29);
     if (profile?.gstin) doc2.text(`GSTIN: ${profile.gstin}`, 20, 35);
