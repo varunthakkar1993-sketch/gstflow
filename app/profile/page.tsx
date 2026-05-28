@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { onAuthStateChanged } from 'firebase/auth';
 import { auth, db } from '../../lib/firebase';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
@@ -9,10 +9,13 @@ export default function ProfilePage() {
   const [user, setUser] = useState<any>(null);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [logoPreview, setLogoPreview] = useState<string>('');
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [profile, setProfile] = useState({
     businessName: '', ownerName: '', gstin: '', address: '',
     city: '', state: '', pincode: '', phone: '', email: '',
     upiId: '', bankName: '', accountNumber: '', ifscCode: '', accountHolder: '',
+    logoBase64: '',
   });
 
   useEffect(() => {
@@ -20,12 +23,29 @@ export default function ProfilePage() {
       if (!currentUser) { window.location.href = '/login'; return; }
       setUser(currentUser);
       const snap = await getDoc(doc(db, 'profiles', currentUser.uid));
-      if (snap.exists()) setProfile(snap.data() as any);
+      if (snap.exists()) {
+        const data = snap.data() as any;
+        setProfile(data);
+        if (data.logoBase64) setLogoPreview(data.logoBase64);
+      }
     });
   }, []);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setProfile({ ...profile, [e.target.name]: e.target.value });
+  };
+
+  const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 500000) { alert('Logo must be under 500KB'); return; }
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      const base64 = ev.target?.result as string;
+      setLogoPreview(base64);
+      setProfile(prev => ({ ...prev, logoBase64: base64 }));
+    };
+    reader.readAsDataURL(file);
   };
 
   const handleSave = async () => {
@@ -71,6 +91,12 @@ export default function ProfilePage() {
         .field label { display: block; font-size: 12.5px; font-weight: 500; color: #374151; margin-bottom: 6px; }
         .field input { width: 100%; padding: 10px 14px; border: 1.5px solid #e5e9f5; border-radius: 8px; font-size: 14px; font-family: 'DM Sans', sans-serif; color: #111827; background: #fff; transition: border-color 0.15s; outline: none; }
         .field input:focus { border-color: #2563eb; box-shadow: 0 0 0 3px rgba(37,99,235,0.08); }
+        .logo-upload-area { border: 2px dashed #e5e9f5; border-radius: 10px; padding: 28px; text-align: center; cursor: pointer; transition: all 0.15s; }
+        .logo-upload-area:hover { border-color: #2563eb; background: #f8faff; }
+        .logo-preview { max-width: 160px; max-height: 70px; object-fit: contain; margin: 0 auto 12px; display: block; }
+        .logo-upload-text { font-size: 13.5px; color: #374151; font-weight: 500; }
+        .logo-upload-hint { font-size: 12px; color: #9ca3af; margin-top: 5px; }
+        .logo-change-btn { font-size: 12.5px; color: #2563eb; margin-top: 10px; cursor: pointer; background: none; border: none; font-family: 'DM Sans', sans-serif; display: block; margin-left: auto; margin-right: auto; }
         .save-bar { display: flex; align-items: center; justify-content: space-between; background: #fff; border-radius: 12px; border: 1px solid #e5e9f5; padding: 16px 24px; }
         .save-hint { font-size: 13px; color: #9ca3af; }
         .btn-save { background: #2563eb; color: #fff; border: none; padding: 11px 28px; border-radius: 9px; font-size: 14px; font-weight: 600; font-family: 'DM Sans', sans-serif; cursor: pointer; transition: background 0.15s; }
@@ -122,56 +148,57 @@ export default function ProfilePage() {
           <div className="card">
             <div className="card-header">
               <div className="card-icon" style={{ background: '#eff6ff' }}>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#2563eb" strokeWidth="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+              </div>
+              <h3>Business Logo</h3>
+            </div>
+            <div className="card-body">
+              <input type="file" ref={fileInputRef} onChange={handleLogoUpload} accept="image/png,image/jpeg,image/svg+xml" style={{ display: 'none' }} />
+              <div className="logo-upload-area" onClick={() => fileInputRef.current?.click()}>
+                {logoPreview ? (
+                  <>
+                    <img src={logoPreview} className="logo-preview" alt="Business logo" />
+                    <button className="logo-change-btn" onClick={(e) => { e.stopPropagation(); fileInputRef.current?.click(); }}>
+                      Change logo
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" strokeWidth="1.5" style={{ margin: '0 auto 12px', display: 'block' }}><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+                    <div className="logo-upload-text">Click to upload your business logo</div>
+                    <div className="logo-upload-hint">PNG, JPG or SVG · Max 500KB · Appears on all invoices</div>
+                  </>
+                )}
+              </div>
+            </div>
+          </div>
+
+          <div className="card">
+            <div className="card-header">
+              <div className="card-icon" style={{ background: '#eff6ff' }}>
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#2563eb" strokeWidth="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
               </div>
               <h3>Business Details</h3>
             </div>
             <div className="card-body">
               <div className="form-row">
-                <div className="field">
-                  <label>Business Name</label>
-                  <input name="businessName" value={profile.businessName} onChange={handleChange} placeholder="Acme Technologies Pvt Ltd" />
-                </div>
-                <div className="field">
-                  <label>Owner / Freelancer Name</label>
-                  <input name="ownerName" value={profile.ownerName} onChange={handleChange} placeholder="Varun Thakkar" />
-                </div>
+                <div className="field"><label>Business Name</label><input name="businessName" value={profile.businessName} onChange={handleChange} placeholder="Acme Technologies Pvt Ltd" /></div>
+                <div className="field"><label>Owner / Freelancer Name</label><input name="ownerName" value={profile.ownerName} onChange={handleChange} placeholder="Varun Thakkar" /></div>
               </div>
               <div className="form-row">
-                <div className="field">
-                  <label>GSTIN</label>
-                  <input name="gstin" value={profile.gstin} onChange={handleChange} placeholder="29AAABC1234D1Z5" />
-                </div>
-                <div className="field">
-                  <label>Phone</label>
-                  <input name="phone" value={profile.phone} onChange={handleChange} placeholder="+91 98765 43210" />
-                </div>
+                <div className="field"><label>GSTIN</label><input name="gstin" value={profile.gstin} onChange={handleChange} placeholder="29AAABC1234D1Z5" /></div>
+                <div className="field"><label>Phone</label><input name="phone" value={profile.phone} onChange={handleChange} placeholder="+91 98765 43210" /></div>
               </div>
               <div className="form-row single">
-                <div className="field">
-                  <label>Business Email</label>
-                  <input name="email" value={profile.email} onChange={handleChange} placeholder="you@business.com" />
-                </div>
+                <div className="field"><label>Business Email</label><input name="email" value={profile.email} onChange={handleChange} placeholder="you@business.com" /></div>
               </div>
               <div className="form-row single">
-                <div className="field">
-                  <label>Address</label>
-                  <input name="address" value={profile.address} onChange={handleChange} placeholder="123, Street Name, Area" />
-                </div>
+                <div className="field"><label>Address</label><input name="address" value={profile.address} onChange={handleChange} placeholder="123, Street Name, Area" /></div>
               </div>
               <div className="form-row three">
-                <div className="field">
-                  <label>City</label>
-                  <input name="city" value={profile.city} onChange={handleChange} placeholder="Mumbai" />
-                </div>
-                <div className="field">
-                  <label>State</label>
-                  <input name="state" value={profile.state} onChange={handleChange} placeholder="Maharashtra" />
-                </div>
-                <div className="field">
-                  <label>Pincode</label>
-                  <input name="pincode" value={profile.pincode} onChange={handleChange} placeholder="400001" />
-                </div>
+                <div className="field"><label>City</label><input name="city" value={profile.city} onChange={handleChange} placeholder="Mumbai" /></div>
+                <div className="field"><label>State</label><input name="state" value={profile.state} onChange={handleChange} placeholder="Maharashtra" /></div>
+                <div className="field"><label>Pincode</label><input name="pincode" value={profile.pincode} onChange={handleChange} placeholder="400001" /></div>
               </div>
             </div>
           </div>
@@ -185,36 +212,21 @@ export default function ProfilePage() {
             </div>
             <div className="card-body">
               <div className="form-row single">
-                <div className="field">
-                  <label>UPI ID</label>
-                  <input name="upiId" value={profile.upiId} onChange={handleChange} placeholder="yourname@okaxis" />
-                </div>
+                <div className="field"><label>UPI ID</label><input name="upiId" value={profile.upiId} onChange={handleChange} placeholder="yourname@okaxis" /></div>
               </div>
               <div className="form-row">
-                <div className="field">
-                  <label>Bank Name</label>
-                  <input name="bankName" value={profile.bankName} onChange={handleChange} placeholder="HDFC Bank" />
-                </div>
-                <div className="field">
-                  <label>Account Holder Name</label>
-                  <input name="accountHolder" value={profile.accountHolder} onChange={handleChange} placeholder="Varun Thakkar" />
-                </div>
+                <div className="field"><label>Bank Name</label><input name="bankName" value={profile.bankName} onChange={handleChange} placeholder="HDFC Bank" /></div>
+                <div className="field"><label>Account Holder Name</label><input name="accountHolder" value={profile.accountHolder} onChange={handleChange} placeholder="Varun Thakkar" /></div>
               </div>
               <div className="form-row">
-                <div className="field">
-                  <label>Account Number</label>
-                  <input name="accountNumber" value={profile.accountNumber} onChange={handleChange} placeholder="XXXXXXXXXXXX" />
-                </div>
-                <div className="field">
-                  <label>IFSC Code</label>
-                  <input name="ifscCode" value={profile.ifscCode} onChange={handleChange} placeholder="HDFC0001234" />
-                </div>
+                <div className="field"><label>Account Number</label><input name="accountNumber" value={profile.accountNumber} onChange={handleChange} placeholder="XXXXXXXXXXXX" /></div>
+                <div className="field"><label>IFSC Code</label><input name="ifscCode" value={profile.ifscCode} onChange={handleChange} placeholder="HDFC0001234" /></div>
               </div>
             </div>
           </div>
 
           <div className="save-bar">
-            <span className="save-hint">Changes are saved to your account and applied to all future invoices.</span>
+            <span className="save-hint">Changes apply to all future invoices.</span>
             <button onClick={handleSave} disabled={saving} className={`btn-save ${saved ? 'saved' : ''}`}>
               {saving ? 'Saving…' : saved ? '✓ Saved' : 'Save Profile'}
             </button>
