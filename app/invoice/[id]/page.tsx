@@ -1,13 +1,17 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { useParams } from 'next/navigation';
 import { onAuthStateChanged } from 'firebase/auth';
 import { auth, db } from '../../../lib/firebase';
 import { doc, getDoc } from 'firebase/firestore';
 import jsPDF from 'jspdf';
 import QRCode from 'qrcode';
 
-export default function InvoiceDetail({ params }: { params: { id: string } }) {
+export default function InvoiceDetail() {
+  const params = useParams();
+  const id = params?.id as string;
+
   const [invoice, setInvoice] = useState<any>(null);
   const [profile, setProfile] = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -16,18 +20,23 @@ export default function InvoiceDetail({ params }: { params: { id: string } }) {
   const [user, setUser] = useState<any>(null);
 
   useEffect(() => {
+    if (!id) return;
     onAuthStateChanged(auth, async (currentUser) => {
       if (!currentUser) { window.location.href = '/login'; return; }
       setUser(currentUser);
-      const [invSnap, profileSnap] = await Promise.all([
-        getDoc(doc(db, 'invoices', params.id)),
-        getDoc(doc(db, 'profiles', currentUser.uid)),
-      ]);
-      if (invSnap.exists()) setInvoice({ id: invSnap.id, ...invSnap.data() });
-      if (profileSnap.exists()) setProfile(profileSnap.data());
+      try {
+        const [invSnap, profileSnap] = await Promise.all([
+          getDoc(doc(db, 'invoices', id)),
+          getDoc(doc(db, 'profiles', currentUser.uid)),
+        ]);
+        if (invSnap.exists()) setInvoice({ id: invSnap.id, ...invSnap.data() });
+        if (profileSnap.exists()) setProfile(profileSnap.data());
+      } catch (err) {
+        console.error(err);
+      }
       setLoading(false);
     });
-  }, [params.id]);
+  }, [id]);
 
   const buildPDF = async () => {
     const doc2 = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
@@ -144,7 +153,7 @@ export default function InvoiceDetail({ params }: { params: { id: string } }) {
 
   if (!invoice) return (
     <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-      <p>Invoice not found.</p>
+      <p>Invoice not found. <a href="/dashboard">Go back</a></p>
     </div>
   );
 
@@ -175,9 +184,8 @@ export default function InvoiceDetail({ params }: { params: { id: string } }) {
         .inv-body { padding: 32px; }
         .inv-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 32px; margin-bottom: 32px; }
         .inv-section-label { font-size: 11px; color: #9ca3af; text-transform: uppercase; letter-spacing: 0.7px; font-weight: 600; margin-bottom: 12px; }
-        .inv-field { margin-bottom: 10px; }
-        .inv-field-label { font-size: 12px; color: #9ca3af; margin-bottom: 2px; }
         .inv-field-value { font-size: 14px; color: #111827; font-weight: 500; }
+        .inv-field-sub { font-size: 12.5px; color: #9ca3af; margin-top: 3px; }
         .inv-table { width: 100%; border-collapse: collapse; margin-bottom: 24px; }
         .inv-table th { font-size: 11px; color: #9ca3af; text-transform: uppercase; letter-spacing: 0.7px; padding: 10px 0; border-bottom: 1px solid #f0f4ff; text-align: left; }
         .inv-table th:last-child { text-align: right; }
@@ -186,11 +194,11 @@ export default function InvoiceDetail({ params }: { params: { id: string } }) {
         .inv-total-row { display: flex; justify-content: space-between; padding: 16px 0 0; border-top: 2px solid #0f1f5c; }
         .inv-total-label { font-size: 15px; font-weight: 600; color: #0f1f5c; }
         .inv-total-value { font-family: 'Lora', serif; font-size: 22px; font-weight: 700; color: #2563eb; }
-        .action-bar { padding: 20px 32px; background: #f8faff; border-top: 1px solid #f0f4ff; display: flex; gap: 12px; }
-        .btn { padding: 10px 20px; border-radius: 8px; font-size: 13.5px; font-weight: 500; font-family: 'DM Sans', sans-serif; cursor: pointer; border: none; display: inline-flex; align-items: center; gap: 7px; transition: all 0.15s; }
+        .action-bar { padding: 20px 32px; background: #f8faff; border-top: 1px solid #f0f4ff; display: flex; gap: 12px; flex-wrap: wrap; }
+        .btn { padding: 10px 20px; border-radius: 8px; font-size: 13.5px; font-weight: 500; font-family: 'DM Sans', sans-serif; cursor: pointer; border: none; display: inline-flex; align-items: center; gap: 7px; transition: all 0.15s; text-decoration: none; }
         .btn-primary { background: #2563eb; color: #fff; }
         .btn-primary:hover { background: #1d4ed8; }
-        .btn-primary:disabled { opacity: 0.6; }
+        .btn-primary:disabled { opacity: 0.6; cursor: not-allowed; }
         .btn-green { background: #16a34a; color: #fff; }
         .btn-green:hover { background: #15803d; }
         .btn-outline { background: #fff; color: #374151; border: 1.5px solid #e5e9f5; }
@@ -246,20 +254,16 @@ export default function InvoiceDetail({ params }: { params: { id: string } }) {
               <div className="inv-grid">
                 <div>
                   <div className="inv-section-label">From</div>
-                  <div className="inv-field">
-                    <div className="inv-field-value">{profile?.businessName || '—'}</div>
-                    <div className="inv-field-label" style={{ marginTop: 4 }}>{profile?.gstin ? `GSTIN: ${profile.gstin}` : ''}</div>
-                    <div className="inv-field-label">{profile?.city}, {profile?.state}</div>
-                  </div>
+                  <div className="inv-field-value">{profile?.businessName || '—'}</div>
+                  <div className="inv-field-sub">{profile?.gstin ? `GSTIN: ${profile.gstin}` : ''}</div>
+                  <div className="inv-field-sub">{profile?.city}, {profile?.state}</div>
                 </div>
                 <div>
                   <div className="inv-section-label">Bill To</div>
-                  <div className="inv-field">
-                    <div className="inv-field-value">{invoice.clientName || '—'}</div>
-                    <div className="inv-field-label" style={{ marginTop: 4 }}>{invoice.clientEmail || ''}</div>
-                    <div className="inv-field-label">{invoice.clientAddress || ''}</div>
-                    <div className="inv-field-label">{invoice.clientGSTIN ? `GSTIN: ${invoice.clientGSTIN}` : ''}</div>
-                  </div>
+                  <div className="inv-field-value">{invoice.clientName || '—'}</div>
+                  <div className="inv-field-sub">{invoice.clientEmail || ''}</div>
+                  <div className="inv-field-sub">{invoice.clientAddress || ''}</div>
+                  <div className="inv-field-sub">{invoice.clientGSTIN ? `GSTIN: ${invoice.clientGSTIN}` : ''}</div>
                 </div>
               </div>
 
@@ -267,7 +271,7 @@ export default function InvoiceDetail({ params }: { params: { id: string } }) {
                 <thead>
                   <tr>
                     <th>Description</th>
-                    <th style={{ textAlign: 'right' }}>Amount</th>
+                    <th>Amount</th>
                   </tr>
                 </thead>
                 <tbody>
