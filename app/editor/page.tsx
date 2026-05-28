@@ -130,7 +130,7 @@ export default function InvoiceEditor() {
       doc2.line(20, y, pageWidth - 20, y); y += 8;
       doc2.setFontSize(12);
       doc2.text('Total', 20, y);
-      doc2.text(`₹ ${total.toLocaleString('en-IN')}`, pageWidth - 20, y, { align: 'right' });
+      doc2.text(`Rs. ${total.toLocaleString('en-IN')}`, pageWidth - 20, y, { align: 'right' });
       y += 16;
 
       // Bank details
