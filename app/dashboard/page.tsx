@@ -257,7 +257,7 @@ export default function Dashboard() {
             ) : (
               invoices.map((inv) => (
                 <div key={inv.id} className="table-row">
-                  <div className="inv-number">{inv.invoiceNumber}</div>
+                  <a href={`/invoice/${inv.id}`} style={{fontSize:14,fontWeight:600,color:"#2563eb",textDecoration:"none"}}>{inv.invoiceNumber}</a>
                   <div>
                     <div className="inv-client">{inv.clientName || '—'}</div>
                     <div className="inv-client-email">{inv.clientEmail || ''}</div>
