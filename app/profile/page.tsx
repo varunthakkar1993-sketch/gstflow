@@ -4,27 +4,15 @@ import { useEffect, useState } from 'react';
 import { onAuthStateChanged } from 'firebase/auth';
 import { auth, db } from '../../lib/firebase';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
-import Link from 'next/link';
 
 export default function ProfilePage() {
   const [user, setUser] = useState<any>(null);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [profile, setProfile] = useState({
-    businessName: '',
-    ownerName: '',
-    gstin: '',
-    address: '',
-    city: '',
-    state: '',
-    pincode: '',
-    phone: '',
-    email: '',
-    upiId: '',
-    bankName: '',
-    accountNumber: '',
-    ifscCode: '',
-    accountHolder: '',
+    businessName: '', ownerName: '', gstin: '', address: '',
+    city: '', state: '', pincode: '', phone: '', email: '',
+    upiId: '', bankName: '', accountNumber: '', ifscCode: '', accountHolder: '',
   });
 
   useEffect(() => {
@@ -36,109 +24,203 @@ export default function ProfilePage() {
     });
   }, []);
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setProfile({ ...profile, [e.target.name]: e.target.value });
   };
 
   const handleSave = async () => {
     setSaving(true);
     await setDoc(doc(db, 'profiles', user.uid), profile);
-    setSaving(false);
-    setSaved(true);
+    setSaving(false); setSaved(true);
     setTimeout(() => setSaved(false), 3000);
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <nav className="bg-white border-b">
-        <div className="max-w-4xl mx-auto px-6 py-4 flex justify-between items-center">
-          <div className="text-2xl font-bold">GSTFlow</div>
-          <div className="flex gap-6 text-sm">
-            <Link href="/dashboard" className="hover:underline">Dashboard</Link>
-            <Link href="/editor" className="hover:underline">New Invoice</Link>
+    <>
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Lora:wght@400;500;600&family=DM+Sans:wght@300;400;500;600&display=swap');
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { background: #f0f4ff; }
+        .profile-root { display: flex; min-height: 100vh; font-family: 'DM Sans', sans-serif; }
+        .sidebar { width: 240px; background: #0f1f5c; min-height: 100vh; display: flex; flex-direction: column; position: fixed; left: 0; top: 0; bottom: 0; z-index: 10; }
+        .sidebar-logo { padding: 28px 24px 24px; border-bottom: 1px solid rgba(255,255,255,0.08); }
+        .sidebar-logo h1 { font-family: 'Lora', serif; font-size: 22px; color: #fff; font-weight: 600; }
+        .sidebar-logo p { font-size: 11px; color: rgba(255,255,255,0.4); margin-top: 2px; letter-spacing: 0.5px; text-transform: uppercase; }
+        .sidebar-nav { padding: 20px 12px; flex: 1; }
+        .nav-label { font-size: 10px; color: rgba(255,255,255,0.3); letter-spacing: 1px; text-transform: uppercase; padding: 0 12px; margin-bottom: 8px; margin-top: 16px; }
+        .nav-item { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 8px; color: rgba(255,255,255,0.6); font-size: 13.5px; text-decoration: none; transition: all 0.15s; }
+        .nav-item:hover { background: rgba(255,255,255,0.08); color: #fff; }
+        .nav-item.active { background: rgba(99,130,255,0.2); color: #fff; font-weight: 500; }
+        .sidebar-footer { padding: 16px 12px; border-top: 1px solid rgba(255,255,255,0.08); }
+        .user-chip { display: flex; align-items: center; gap: 10px; padding: 8px 12px; }
+        .user-avatar { width: 32px; height: 32px; background: linear-gradient(135deg, #6382ff, #3b5bdb); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #fff; font-size: 13px; font-weight: 600; flex-shrink: 0; }
+        .user-email { font-size: 11.5px; color: rgba(255,255,255,0.5); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .main { margin-left: 240px; flex: 1; padding: 36px 40px; max-width: 860px; }
+        .page-header { margin-bottom: 28px; }
+        .page-header h2 { font-family: 'Lora', serif; font-size: 26px; color: #0f1f5c; font-weight: 600; }
+        .page-header p { color: #6b7280; font-size: 14px; margin-top: 4px; }
+        .card { background: #fff; border-radius: 12px; border: 1px solid #e5e9f5; overflow: hidden; margin-bottom: 20px; }
+        .card-header { padding: 16px 24px; border-bottom: 1px solid #f0f4ff; display: flex; align-items: center; gap: 10px; }
+        .card-header h3 { font-size: 14px; font-weight: 600; color: #0f1f5c; }
+        .card-icon { width: 28px; height: 28px; border-radius: 7px; display: flex; align-items: center; justify-content: center; }
+        .card-body { padding: 20px 24px; }
+        .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+        .form-row.three { grid-template-columns: 1fr 1fr 1fr; }
+        .form-row.single { grid-template-columns: 1fr; }
+        .field { margin-bottom: 16px; }
+        .field label { display: block; font-size: 12.5px; font-weight: 500; color: #374151; margin-bottom: 6px; }
+        .field input { width: 100%; padding: 10px 14px; border: 1.5px solid #e5e9f5; border-radius: 8px; font-size: 14px; font-family: 'DM Sans', sans-serif; color: #111827; background: #fff; transition: border-color 0.15s; outline: none; }
+        .field input:focus { border-color: #2563eb; box-shadow: 0 0 0 3px rgba(37,99,235,0.08); }
+        .save-bar { display: flex; align-items: center; justify-content: space-between; background: #fff; border-radius: 12px; border: 1px solid #e5e9f5; padding: 16px 24px; }
+        .save-hint { font-size: 13px; color: #9ca3af; }
+        .btn-save { background: #2563eb; color: #fff; border: none; padding: 11px 28px; border-radius: 9px; font-size: 14px; font-weight: 600; font-family: 'DM Sans', sans-serif; cursor: pointer; transition: background 0.15s; }
+        .btn-save:hover { background: #1d4ed8; }
+        .btn-save:disabled { opacity: 0.6; cursor: not-allowed; }
+        .btn-save.saved { background: #16a34a; }
+      `}</style>
+
+      <div className="profile-root">
+        <aside className="sidebar">
+          <div className="sidebar-logo">
+            <h1>GSTFlow</h1>
+            <p>Invoice Manager</p>
           </div>
-        </div>
-      </nav>
+          <nav className="sidebar-nav">
+            <div className="nav-label">Main</div>
+            <a href="/dashboard" className="nav-item">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+              Dashboard
+            </a>
+            <a href="/editor" className="nav-item">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/></svg>
+              New Invoice
+            </a>
+            <div className="nav-label">Settings</div>
+            <a href="/profile" className="nav-item active">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+              Business Profile
+            </a>
+            <a href="/templates" className="nav-item">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg>
+              Templates
+            </a>
+          </nav>
+          <div className="sidebar-footer">
+            <div className="user-chip">
+              <div className="user-avatar">{user?.email?.[0]?.toUpperCase()}</div>
+              <div className="user-email">{user?.email}</div>
+            </div>
+          </div>
+        </aside>
 
-      <div className="max-w-4xl mx-auto px-6 py-10">
-        <h1 className="text-3xl font-bold mb-2">Business Profile</h1>
-        <p className="text-gray-500 mb-8">This info auto-fills every invoice you create.</p>
+        <main className="main">
+          <div className="page-header">
+            <h2>Business Profile</h2>
+            <p>This info auto-fills every invoice you create.</p>
+          </div>
 
-        <div className="bg-white rounded-2xl shadow-sm p-8 space-y-8">
-
-          <div>
-            <h2 className="text-lg font-semibold mb-4 pb-2 border-b">Business Details</h2>
-            <div className="grid grid-cols-2 gap-6">
-              <div>
-                <label className="block text-sm font-medium mb-2">Business Name</label>
-                <input name="businessName" value={profile.businessName} onChange={handleChange} className="w-full px-4 py-3 border border-gray-300 rounded-xl" placeholder="Acme Technologies" />
+          <div className="card">
+            <div className="card-header">
+              <div className="card-icon" style={{ background: '#eff6ff' }}>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#2563eb" strokeWidth="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
               </div>
-              <div>
-                <label className="block text-sm font-medium mb-2">Owner / Freelancer Name</label>
-                <input name="ownerName" value={profile.ownerName} onChange={handleChange} className="w-full px-4 py-3 border border-gray-300 rounded-xl" placeholder="Varun Thakkar" />
+              <h3>Business Details</h3>
+            </div>
+            <div className="card-body">
+              <div className="form-row">
+                <div className="field">
+                  <label>Business Name</label>
+                  <input name="businessName" value={profile.businessName} onChange={handleChange} placeholder="Acme Technologies Pvt Ltd" />
+                </div>
+                <div className="field">
+                  <label>Owner / Freelancer Name</label>
+                  <input name="ownerName" value={profile.ownerName} onChange={handleChange} placeholder="Varun Thakkar" />
+                </div>
               </div>
-              <div>
-                <label className="block text-sm font-medium mb-2">GSTIN</label>
-                <input name="gstin" value={profile.gstin} onChange={handleChange} className="w-full px-4 py-3 border border-gray-300 rounded-xl" placeholder="29AAABC1234D1Z5" />
+              <div className="form-row">
+                <div className="field">
+                  <label>GSTIN</label>
+                  <input name="gstin" value={profile.gstin} onChange={handleChange} placeholder="29AAABC1234D1Z5" />
+                </div>
+                <div className="field">
+                  <label>Phone</label>
+                  <input name="phone" value={profile.phone} onChange={handleChange} placeholder="+91 98765 43210" />
+                </div>
               </div>
-              <div>
-                <label className="block text-sm font-medium mb-2">Phone</label>
-                <input name="phone" value={profile.phone} onChange={handleChange} className="w-full px-4 py-3 border border-gray-300 rounded-xl" placeholder="+91 98765 43210" />
+              <div className="form-row single">
+                <div className="field">
+                  <label>Business Email</label>
+                  <input name="email" value={profile.email} onChange={handleChange} placeholder="you@business.com" />
+                </div>
               </div>
-              <div className="col-span-2">
-                <label className="block text-sm font-medium mb-2">Email</label>
-                <input name="email" value={profile.email} onChange={handleChange} className="w-full px-4 py-3 border border-gray-300 rounded-xl" placeholder="you@business.com" />
+              <div className="form-row single">
+                <div className="field">
+                  <label>Address</label>
+                  <input name="address" value={profile.address} onChange={handleChange} placeholder="123, Street Name, Area" />
+                </div>
               </div>
-              <div className="col-span-2">
-                <label className="block text-sm font-medium mb-2">Address</label>
-                <input name="address" value={profile.address} onChange={handleChange} className="w-full px-4 py-3 border border-gray-300 rounded-xl" placeholder="123, Street Name, Area" />
-              </div>
-              <div>
-                <label className="block text-sm font-medium mb-2">City</label>
-                <input name="city" value={profile.city} onChange={handleChange} className="w-full px-4 py-3 border border-gray-300 rounded-xl" placeholder="Mumbai" />
-              </div>
-              <div>
-                <label className="block text-sm font-medium mb-2">State</label>
-                <input name="state" value={profile.state} onChange={handleChange} className="w-full px-4 py-3 border border-gray-300 rounded-xl" placeholder="Maharashtra" />
-              </div>
-              <div>
-                <label className="block text-sm font-medium mb-2">Pincode</label>
-                <input name="pincode" value={profile.pincode} onChange={handleChange} className="w-full px-4 py-3 border border-gray-300 rounded-xl" placeholder="400001" />
+              <div className="form-row three">
+                <div className="field">
+                  <label>City</label>
+                  <input name="city" value={profile.city} onChange={handleChange} placeholder="Mumbai" />
+                </div>
+                <div className="field">
+                  <label>State</label>
+                  <input name="state" value={profile.state} onChange={handleChange} placeholder="Maharashtra" />
+                </div>
+                <div className="field">
+                  <label>Pincode</label>
+                  <input name="pincode" value={profile.pincode} onChange={handleChange} placeholder="400001" />
+                </div>
               </div>
             </div>
           </div>
 
-          <div>
-            <h2 className="text-lg font-semibold mb-4 pb-2 border-b">Payment Details</h2>
-            <div className="grid grid-cols-2 gap-6">
-              <div>
-                <label className="block text-sm font-medium mb-2">UPI ID</label>
-                <input name="upiId" value={profile.upiId} onChange={handleChange} className="w-full px-4 py-3 border border-gray-300 rounded-xl" placeholder="yourname@okaxis" />
+          <div className="card">
+            <div className="card-header">
+              <div className="card-icon" style={{ background: '#f0fdf4' }}>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#16a34a" strokeWidth="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
               </div>
-              <div>
-                <label className="block text-sm font-medium mb-2">Bank Name</label>
-                <input name="bankName" value={profile.bankName} onChange={handleChange} className="w-full px-4 py-3 border border-gray-300 rounded-xl" placeholder="HDFC Bank" />
+              <h3>Payment Details</h3>
+            </div>
+            <div className="card-body">
+              <div className="form-row single">
+                <div className="field">
+                  <label>UPI ID</label>
+                  <input name="upiId" value={profile.upiId} onChange={handleChange} placeholder="yourname@okaxis" />
+                </div>
               </div>
-              <div>
-                <label className="block text-sm font-medium mb-2">Account Holder Name</label>
-                <input name="accountHolder" value={profile.accountHolder} onChange={handleChange} className="w-full px-4 py-3 border border-gray-300 rounded-xl" placeholder="Varun Thakkar" />
+              <div className="form-row">
+                <div className="field">
+                  <label>Bank Name</label>
+                  <input name="bankName" value={profile.bankName} onChange={handleChange} placeholder="HDFC Bank" />
+                </div>
+                <div className="field">
+                  <label>Account Holder Name</label>
+                  <input name="accountHolder" value={profile.accountHolder} onChange={handleChange} placeholder="Varun Thakkar" />
+                </div>
               </div>
-              <div>
-                <label className="block text-sm font-medium mb-2">Account Number</label>
-                <input name="accountNumber" value={profile.accountNumber} onChange={handleChange} className="w-full px-4 py-3 border border-gray-300 rounded-xl" placeholder="XXXXXXXXXXXX" />
-              </div>
-              <div>
-                <label className="block text-sm font-medium mb-2">IFSC Code</label>
-                <input name="ifscCode" value={profile.ifscCode} onChange={handleChange} className="w-full px-4 py-3 border border-gray-300 rounded-xl" placeholder="HDFC0001234" />
+              <div className="form-row">
+                <div className="field">
+                  <label>Account Number</label>
+                  <input name="accountNumber" value={profile.accountNumber} onChange={handleChange} placeholder="XXXXXXXXXXXX" />
+                </div>
+                <div className="field">
+                  <label>IFSC Code</label>
+                  <input name="ifscCode" value={profile.ifscCode} onChange={handleChange} placeholder="HDFC0001234" />
+                </div>
               </div>
             </div>
           </div>
 
-          <button onClick={handleSave} disabled={saving} className="w-full bg-black text-white py-4 rounded-2xl text-lg font-medium hover:bg-gray-800 disabled:opacity-70">
-            {saving ? 'Saving...' : saved ? '✅ Saved!' : 'Save Profile'}
-          </button>
-        </div>
+          <div className="save-bar">
+            <span className="save-hint">Changes are saved to your account and applied to all future invoices.</span>
+            <button onClick={handleSave} disabled={saving} className={`btn-save ${saved ? 'saved' : ''}`}>
+              {saving ? 'Saving…' : saved ? '✓ Saved' : 'Save Profile'}
+            </button>
+          </div>
+        </main>
       </div>
-    </div>
+    </>
   );
 }
