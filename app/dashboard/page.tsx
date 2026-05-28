@@ -3,8 +3,7 @@
 import { useEffect, useState } from 'react';
 import { onAuthStateChanged, signOut } from 'firebase/auth';
 import { auth, db } from '../../lib/firebase';
-import { collection, query, where, getDocs, orderBy } from 'firebase/firestore';
-import Link from 'next/link';
+import { collection, query, where, getDocs, orderBy, doc, updateDoc } from 'firebase/firestore';
 
 export default function Dashboard() {
   const [user, setUser] = useState<any>(null);
@@ -18,7 +17,7 @@ export default function Dashboard() {
         try {
           const q = query(collection(db, 'invoices'), where('userId', '==', currentUser.uid), orderBy('createdAt', 'desc'));
           const snap = await getDocs(q);
-          setInvoices(snap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+          setInvoices(snap.docs.map(d => ({ id: d.id, ...d.data() })));
         } catch (err: any) {
           console.error('Firestore error:', err?.message);
           setInvoices([]);
@@ -31,7 +30,15 @@ export default function Dashboard() {
     return () => unsubscribe();
   }, []);
 
+  const toggleStatus = async (inv: any) => {
+    const next = inv.status === 'paid' ? 'unpaid' : inv.status === 'unpaid' ? 'sent' : 'paid';
+    await updateDoc(doc(db, 'invoices', inv.id), { status: next });
+    setInvoices(prev => prev.map(i => i.id === inv.id ? { ...i, status: next } : i));
+  };
+
   const totalRevenue = invoices.reduce((sum, inv) => sum + (inv.total || 0), 0);
+  const paidRevenue = invoices.filter(i => i.status === 'paid').reduce((sum, inv) => sum + (inv.total || 0), 0);
+  const unpaidCount = invoices.filter(i => i.status === 'unpaid').length;
   const thisMonth = invoices.filter(inv => {
     if (!inv.date) return false;
     const d = new Date(inv.date);
@@ -43,6 +50,18 @@ export default function Dashboard() {
   const handleLogout = async () => {
     await signOut(auth);
     window.location.href = '/';
+  };
+
+  const statusStyle = (status: string) => {
+    if (status === 'paid') return { background: '#dcfce7', color: '#16a34a' };
+    if (status === 'unpaid') return { background: '#fee2e2', color: '#dc2626' };
+    return { background: '#dbeafe', color: '#1d4ed8' };
+  };
+
+  const statusLabel = (status: string) => {
+    if (status === 'paid') return '✓ Paid';
+    if (status === 'unpaid') return '⚠ Unpaid';
+    return '→ Sent';
   };
 
   if (loading) return (
@@ -71,8 +90,6 @@ export default function Dashboard() {
         .nav-item { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 8px; color: rgba(255,255,255,0.6); font-size: 13.5px; font-weight: 400; text-decoration: none; transition: all 0.15s; cursor: pointer; border: none; background: none; width: 100%; text-align: left; }
         .nav-item:hover { background: rgba(255,255,255,0.08); color: #fff; }
         .nav-item.active { background: rgba(99,130,255,0.2); color: #fff; font-weight: 500; }
-        .nav-item svg { opacity: 0.7; flex-shrink: 0; }
-        .nav-item.active svg { opacity: 1; }
         .sidebar-footer { padding: 16px 12px; border-top: 1px solid rgba(255,255,255,0.08); }
         .user-chip { display: flex; align-items: center; gap: 10px; padding: 8px 12px; }
         .user-avatar { width: 32px; height: 32px; background: linear-gradient(135deg, #6382ff, #3b5bdb); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #fff; font-size: 13px; font-weight: 600; flex-shrink: 0; }
@@ -88,9 +105,9 @@ export default function Dashboard() {
         .stat-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px; }
         .stat-card.blue::before { background: #2563eb; }
         .stat-card.indigo::before { background: #4f46e5; }
-        .stat-card.sky::before { background: #0ea5e9; }
-        .stat-card.violet::before { background: #7c3aed; }
-        .stat-label { font-size: 11.5px; color: #9ca3af; text-transform: uppercase; letter-spacing: 0.6px; font-weight: 500; }
+        .stat-card.green::before { background: #16a34a; }
+        .stat-card.red::before { background: #dc2626; }
+        .stat-label { font-size: 13px; color: #9ca3af; text-transform: uppercase; letter-spacing: 0.6px; font-weight: 500; }
         .stat-value { font-family: 'Lora', serif; font-size: 28px; color: #0f1f5c; font-weight: 600; margin-top: 6px; letter-spacing: -0.5px; }
         .stat-sub { font-size: 12px; color: #9ca3af; margin-top: 4px; }
         .section-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
@@ -99,28 +116,28 @@ export default function Dashboard() {
         .new-btn:hover { background: #1d4ed8; }
         .invoice-table { background: #fff; border-radius: 12px; border: 1px solid #e5e9f5; overflow: hidden; }
         .table-head { display: grid; grid-template-columns: 1fr 2fr 1.5fr 1fr 1fr; gap: 16px; padding: 12px 24px; background: #f8faff; border-bottom: 1px solid #e5e9f5; }
-        .th { font-size: 11px; color: #9ca3af; text-transform: uppercase; letter-spacing: 0.7px; font-weight: 600; }
+        .th { font-size: 12px; color: #9ca3af; text-transform: uppercase; letter-spacing: 0.7px; font-weight: 600; }
         .table-row { display: grid; grid-template-columns: 1fr 2fr 1.5fr 1fr 1fr; gap: 16px; padding: 16px 24px; border-bottom: 1px solid #f3f4f6; align-items: center; transition: background 0.1s; }
         .table-row:last-child { border-bottom: none; }
         .table-row:hover { background: #f8faff; }
-        .inv-number { font-size: 13px; font-weight: 600; color: #2563eb; }
-        .inv-client { font-size: 13.5px; color: #111827; font-weight: 500; }
-        .inv-client-email { font-size: 11.5px; color: #9ca3af; margin-top: 1px; }
+        .inv-number { font-size: 14px; font-weight: 600; color: #2563eb; }
+        .inv-client { font-size: 14px; color: #111827; font-weight: 500; }
+        .inv-client-email { font-size: 13px; color: #9ca3af; margin-top: 1px; }
         .inv-amount { font-size: 14px; font-weight: 600; color: #111827; font-family: 'Lora', serif; }
-        .inv-date { font-size: 12.5px; color: #6b7280; }
-        .status-badge { display: inline-flex; align-items: center; gap: 5px; padding: 3px 10px; border-radius: 20px; font-size: 11.5px; font-weight: 500; }
-        .status-badge.paid { background: #dcfce7; color: #16a34a; }
-        .status-badge.sent { background: #dbeafe; color: #1d4ed8; }
-        .empty-state { padding: 60px 24px; text-align: center; }
-        .empty-icon { width: 56px; height: 56px; background: #eff6ff; border-radius: 14px; display: flex; align-items: center; justify-content: center; margin: 0 auto 16px; }
-        .empty-title { font-family: 'Lora', serif; font-size: 17px; color: #0f1f5c; font-weight: 600; margin-bottom: 6px; }
-        .empty-sub { font-size: 13.5px; color: #9ca3af; margin-bottom: 20px; }
+        .inv-date { font-size: 13px; color: #6b7280; }
+        .status-badge { display: inline-flex; align-items: center; gap: 5px; padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: 500; cursor: pointer; border: none; transition: opacity 0.15s; }
+        .status-badge:hover { opacity: 0.8; }
+        .status-hint { font-size: 11px; color: #9ca3af; margin-top: 3px; }
         .quick-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 32px; }
         .action-card { background: #fff; border: 1px solid #e5e9f5; border-radius: 12px; padding: 20px 24px; display: flex; align-items: center; gap: 16px; text-decoration: none; transition: all 0.15s; }
         .action-card:hover { border-color: #2563eb; box-shadow: 0 0 0 3px rgba(37,99,235,0.08); }
         .action-icon { width: 42px; height: 42px; border-radius: 10px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
         .action-title { font-size: 14px; font-weight: 600; color: #0f1f5c; }
         .action-sub { font-size: 12px; color: #9ca3af; margin-top: 2px; }
+        .empty-state { padding: 60px 24px; text-align: center; }
+        .empty-icon { width: 56px; height: 56px; background: #eff6ff; border-radius: 14px; display: flex; align-items: center; justify-content: center; margin: 0 auto 16px; }
+        .empty-title { font-family: 'Lora', serif; font-size: 17px; color: #0f1f5c; font-weight: 600; margin-bottom: 6px; }
+        .empty-sub { font-size: 13.5px; color: #9ca3af; margin-bottom: 20px; }
       `}</style>
 
       <div className="dash-root">
@@ -178,15 +195,15 @@ export default function Dashboard() {
               <div className="stat-value">Rs. {thisMonthRevenue.toLocaleString('en-IN')}</div>
               <div className="stat-sub">{thisMonth.length} invoice{thisMonth.length !== 1 ? 's' : ''}</div>
             </div>
-            <div className="stat-card sky">
-              <div className="stat-label">Total Invoices</div>
-              <div className="stat-value">{invoices.length}</div>
-              <div className="stat-sub">All time</div>
+            <div className="stat-card green">
+              <div className="stat-label">Collected</div>
+              <div className="stat-value">Rs. {paidRevenue.toLocaleString('en-IN')}</div>
+              <div className="stat-sub">Marked as paid</div>
             </div>
-            <div className="stat-card violet">
-              <div className="stat-label">Avg. Invoice</div>
-              <div className="stat-value">Rs. {invoices.length ? Math.round(totalRevenue / invoices.length).toLocaleString('en-IN') : '0'}</div>
-              <div className="stat-sub">Per invoice</div>
+            <div className="stat-card red">
+              <div className="stat-label">Pending</div>
+              <div className="stat-value">{unpaidCount}</div>
+              <div className="stat-sub">Unpaid invoice{unpaidCount !== 1 ? 's' : ''}</div>
             </div>
           </div>
 
@@ -247,7 +264,17 @@ export default function Dashboard() {
                   </div>
                   <div className="inv-amount">Rs. {(inv.total || 0).toLocaleString('en-IN')}</div>
                   <div className="inv-date">{inv.date || '—'}</div>
-                  <div><span className="status-badge sent">Sent</span></div>
+                  <div>
+                    <button
+                      className="status-badge"
+                      style={statusStyle(inv.status || 'sent')}
+                      onClick={() => toggleStatus(inv)}
+                      title="Click to change status"
+                    >
+                      {statusLabel(inv.status || 'sent')}
+                    </button>
+                    <div className="status-hint">click to change</div>
+                  </div>
                 </div>
               ))
             )}
