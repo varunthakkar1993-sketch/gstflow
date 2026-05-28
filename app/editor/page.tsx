@@ -100,7 +100,7 @@ export default function InvoiceEditor() {
       doc2.setFont('helvetica', 'bold');
       doc2.setFontSize(10);
       doc2.text('Description', 20, y);
-      doc2.text('Amount (₹)', pageWidth - 20, y, { align: 'right' });
+      doc2.text('Amount (Rs.)', pageWidth - 20, y, { align: 'right' });
       y += 5;
       doc2.setLineWidth(0.3);
       doc2.line(20, y, pageWidth - 20, y);
