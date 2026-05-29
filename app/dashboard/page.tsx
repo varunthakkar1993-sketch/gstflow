@@ -266,7 +266,6 @@ export default function Dashboard() {
               <div style={{ fontSize: 12, color: '#dc2626', marginTop: 2 }}>Expenses: Rs. {totalExpenses.toLocaleString('en-IN')}</div>
             </div>
           </div>
-
           </div>
 
           <div className="quick-actions">
