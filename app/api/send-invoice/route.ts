@@ -9,7 +9,7 @@ export async function POST(req: NextRequest) {
 
     await sgMail.send({
       to,
-      from: 'varunthakkar1993@gmail.com', // must match your verified sender
+      from: 'noreply@paavti.in', // must match your verified sender
       subject: subject || `Invoice ${invoiceNumber} from ${businessName}`,
       html: `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
