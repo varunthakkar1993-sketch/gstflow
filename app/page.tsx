@@ -101,10 +101,10 @@ export default function Home() {
             Built for Indian Freelancers & Businesses
           </div>
           <h1 className="hero-title">
-            GST Invoices in <span>60 seconds.</span> Not 60 minutes.
+            Invoices. Quotes. Expenses. <span>All in one place.</span>
           </h1>
           <p className="hero-sub">
-            Create professional GST-compliant invoices with automatic CGST/SGST/IGST calculations, UPI QR code, and instant PDF download.
+            The complete business toolkit for Indian freelancers &amp; small businesses — GST compliant, UPI ready, built for India.
           </p>
           <div className="hero-actions">
             <a href="/signup" className="btn-hero-primary">Create Free Invoice →</a>
@@ -168,8 +168,8 @@ export default function Home() {
 
       <section id="features" className="features">
         <div className="section-label">Features</div>
-        <h2 className="section-title">Everything you need to invoice professionally</h2>
-        <p className="section-sub">Built specifically for Indian freelancers and small businesses who need GST compliance without the complexity.</p>
+        <h2 className="section-title">Everything your business needs</h2>
+        <p className="section-sub">From sending quotes to tracking expenses — GSTFlow is the only tool Indian freelancers and small businesses need.</p>
         <div className="features-grid">
           <div className="feature-card">
             <div className="feature-icon" style={{ background: '#eff6ff' }}>
@@ -224,17 +224,17 @@ export default function Home() {
             <div className="step">
               <div className="step-num">1</div>
               <div className="step-title">Set up your profile</div>
-              <div className="step-desc">Enter your business name, GSTIN, address, and bank details once. We save everything securely.</div>
+              <div className="step-desc">Enter your business name, GSTIN, address, bank details and logo once. Auto-fills every document you create.</div>
             </div>
             <div className="step">
               <div className="step-num">2</div>
-              <div className="step-title">Fill in client details</div>
-              <div className="step-desc">Enter client name, address, and select the right GST slab. Our system calculates taxes automatically.</div>
+              <div className="step-title">Create invoices or quotes</div>
+              <div className="step-desc">Generate GST invoices or send estimates to clients. Track status, convert quotes to invoices in one click.</div>
             </div>
             <div className="step">
               <div className="step-num">3</div>
-              <div className="step-title">Download & share</div>
-              <div className="step-desc">Get a professional PDF with UPI QR code. Email it directly or share via WhatsApp in seconds.</div>
+              <div className="step-title">Track & grow</div>
+              <div className="step-desc">Log expenses, track net profit, manage clients — everything in one clean dashboard built for India.</div>
             </div>
           </div>
         </div>
