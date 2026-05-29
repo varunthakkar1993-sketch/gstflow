@@ -85,7 +85,7 @@ export default function Home() {
       `}</style>
 
       <nav className="nav">
-        <a href="/" className="nav-logo">GST<span>Flow</span></a>
+        <a href="/" className="nav-logo">Paav<span>ti</span></a>
         <div className="nav-links">
           <a href="#features" className="nav-link">Features</a>
           <a href="#how-it-works" className="nav-link">How it works</a>
@@ -104,7 +104,7 @@ export default function Home() {
             Invoices. Quotes. Expenses. <span>All in one place.</span>
           </h1>
           <p className="hero-sub">
-            The complete business toolkit for Indian freelancers &amp; small businesses — GST compliant, UPI ready, built for India.
+            The complete business toolkit for Indian freelancers &amp; small businesses. GST compliant, UPI ready, built for India.
           </p>
           <div className="hero-actions">
             <a href="/signup" className="btn-hero-primary">Create Free Invoice →</a>
@@ -113,7 +113,7 @@ export default function Home() {
           <div className="hero-trust">
             <div className="trust-item"><div className="trust-dot" /> No credit card required</div>
             <div className="trust-item"><div className="trust-dot" /> GST compliant</div>
-            <div className="trust-item"><div className="trust-dot" /> Free forever</div>
+            <div className="trust-item"><div className="trust-dot" /> Free to get started</div>
           </div>
         </div>
 
@@ -169,7 +169,7 @@ export default function Home() {
       <section id="features" className="features">
         <div className="section-label">Features</div>
         <h2 className="section-title">Everything your business needs</h2>
-        <p className="section-sub">From sending quotes to tracking expenses — Paavti is the only tool Indian freelancers and small businesses need.</p>
+        <p className="section-sub">From sending quotes to tracking expenses. Paavti is the only tool Indian freelancers and small businesses need.</p>
         <div className="features-grid">
           <div className="feature-card">
             <div className="feature-icon" style={{ background: '#eff6ff' }}>
@@ -243,7 +243,7 @@ export default function Home() {
       <section className="cta-section">
         <div className="cta-box">
           <h2 className="cta-title">Run your business smarter, for free</h2>
-          <p className="cta-sub">Invoices, quotes, expense tracking and client management — everything your business needs, free forever.</p>
+          <p className="cta-sub">Invoices, quotes, expense tracking and client management. Everything your business needs.</p>
           <a href="/signup" className="btn-cta">Get Started Free →</a>
           <div className="cta-note">No credit card required · Free to get started</div>
         </div>
