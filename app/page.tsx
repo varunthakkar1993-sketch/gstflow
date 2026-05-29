@@ -234,7 +234,7 @@ export default function Home() {
             <div className="step">
               <div className="step-num">3</div>
               <div className="step-title">Track & grow</div>
-              <div className="step-desc">Log expenses, track net profit, manage clients. One clean dashboard built for India. in one clean dashboard built for India.</div>
+              <div className="step-desc">Log expenses, track net profit, manage clients. One clean dashboard built for India.</div>
             </div>
           </div>
         </div>
