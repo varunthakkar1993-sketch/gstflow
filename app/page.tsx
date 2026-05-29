@@ -214,7 +214,6 @@ export default function Home() {
             <div className="feature-desc">Total revenue, expenses, net profit, paid vs unpaid invoices — everything you need to run your business at a glance.</div>
           </div>
         </div>
-        </div>
       </section>
 
       <section id="how-it-works" className="how-it-works">
