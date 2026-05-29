@@ -89,6 +89,7 @@ export default function Home() {
         <div className="nav-links">
           <a href="#features" className="nav-link">Features</a>
           <a href="#how-it-works" className="nav-link">How it works</a>
+          <a href="/pricing" className="nav-link">Pricing</a>
           <a href="/login" className="nav-link">Login</a>
           <a href="/signup" className="nav-cta">Start Free</a>
         </div>
