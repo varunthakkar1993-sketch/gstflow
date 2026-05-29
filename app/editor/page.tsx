@@ -8,7 +8,9 @@ import { collection, addDoc, serverTimestamp, doc, getDoc, query, where, getCoun
 import jsPDF from 'jspdf';
 import QRCode from 'qrcode';
 
-export default function InvoiceEditor() {
+import { Suspense } from 'react';
+
+function InvoiceEditorInner() {
   const searchParams = useSearchParams();
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(false);
@@ -572,5 +574,13 @@ export default function InvoiceEditor() {
         </main>
       </div>
     </>
+  );
+}
+
+export default function InvoiceEditor() {
+  return (
+    <Suspense fallback={<div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><div style={{ width: 40, height: 40, border: '3px solid #2563eb', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} /><style>{\`@keyframes spin { to { transform: rotate(360deg); } }\`}</style></div>}>
+      <InvoiceEditorInner />
+    </Suspense>
   );
 }
