@@ -42,15 +42,33 @@ export default function InvoiceEditor() {
     });
   }, []);
 
-  // Pre-fill from quote URL params
+  // Pre-fill from quote - fetch from Firestore using from_quote param
   useEffect(() => {
     if (typeof window === 'undefined') return;
     const params = new URLSearchParams(window.location.search);
+    const fromQuote = params.get('from_quote');
     const clientName = params.get('clientName') || '';
     const clientEmail = params.get('clientEmail') || '';
     const clientAddress = params.get('clientAddress') || '';
     const amount = params.get('amount') || '';
-    if (clientName || clientEmail || clientAddress || amount) {
+
+    if (fromQuote) {
+      // Fetch quote from Firestore and pre-fill
+      import('firebase/firestore').then(({ doc, getDoc }) => {
+        getDoc(doc(db, 'quotes', fromQuote)).then(snap => {
+          if (snap.exists()) {
+            const q = snap.data();
+            setInvoiceData(prev => ({
+              ...prev,
+              clientName: q.clientName || '',
+              clientEmail: q.clientEmail || '',
+              clientAddress: q.clientAddress || '',
+              amount: String(q.total || '5000'),
+            }));
+          }
+        });
+      });
+    } else if (clientName || clientEmail || clientAddress || amount) {
       setInvoiceData(prev => ({
         ...prev,
         ...(clientName && { clientName }),
