@@ -2,16 +2,12 @@
 
 import { useEffect, useState } from 'react';
 import { onAuthStateChanged } from 'firebase/auth';
-import { useSearchParams } from 'next/navigation';
 import { auth, db } from '../../lib/firebase';
 import { collection, addDoc, serverTimestamp, doc, getDoc, query, where, getCountFromServer } from 'firebase/firestore';
 import jsPDF from 'jspdf';
 import QRCode from 'qrcode';
 
-import { Suspense } from 'react';
-
-function InvoiceEditorInner() {
-  const searchParams = useSearchParams();
+export default function InvoiceEditor() {
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(false);
   const [profile, setProfile] = useState<any>(null);
@@ -46,12 +42,14 @@ function InvoiceEditorInner() {
     });
   }, []);
 
-  // Separate effect to pre-fill from quote URL params
+  // Pre-fill from quote URL params
   useEffect(() => {
-    const clientName = searchParams.get('clientName') || '';
-    const clientEmail = searchParams.get('clientEmail') || '';
-    const clientAddress = searchParams.get('clientAddress') || '';
-    const amount = searchParams.get('amount') || '';
+    if (typeof window === 'undefined') return;
+    const params = new URLSearchParams(window.location.search);
+    const clientName = params.get('clientName') || '';
+    const clientEmail = params.get('clientEmail') || '';
+    const clientAddress = params.get('clientAddress') || '';
+    const amount = params.get('amount') || '';
     if (clientName || clientEmail || clientAddress || amount) {
       setInvoiceData(prev => ({
         ...prev,
@@ -61,7 +59,7 @@ function InvoiceEditorInner() {
         ...(amount && { amount }),
       }));
     }
-  }, [searchParams]);
+  }, []);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     setInvoiceData({ ...invoiceData, [e.target.name]: e.target.value });
@@ -574,13 +572,5 @@ function InvoiceEditorInner() {
         </main>
       </div>
     </>
-  );
-}
-
-export default function InvoiceEditor() {
-  return (
-    <Suspense fallback={<div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><div style={{ width: 40, height: 40, border: '3px solid #2563eb', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} /><style>{\`@keyframes spin { to { transform: rotate(360deg); } }\`}</style></div>}>
-      <InvoiceEditorInner />
-    </Suspense>
   );
 }
