@@ -27,7 +27,7 @@ export default function Templates() {
     <div className="min-h-screen bg-gray-50">
       <nav className="bg-white border-b">
         <div className="max-w-6xl mx-auto px-6 py-4 flex justify-between">
-          <div className="text-2xl font-bold">GSTFlow</div>
+          <div className="text-2xl font-bold">Paavti</div>
           <a href="/dashboard" className="text-black hover:underline">← Back to Dashboard</a>
         </div>
       </nav>

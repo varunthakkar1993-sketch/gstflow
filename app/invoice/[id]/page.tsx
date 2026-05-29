@@ -105,14 +105,14 @@ export default function InvoiceDetail() {
     }
     doc2.setFontSize(9); doc2.setFont('helvetica', 'normal');
     doc2.text('Thank you for your business!', 20, y);
-    doc2.text('Made with GSTFlow.in', 20, y + 6);
+    doc2.text('Made with Paavti.in', 20, y + 6);
     return doc2;
   };
 
   const handleDownload = async () => {
     setDownloading(true);
     const doc2 = await buildPDF();
-    doc2.save(`GSTFlow-${invoice.invoiceNumber}.pdf`);
+    doc2.save(`Paavti-${invoice.invoiceNumber}.pdf`);
     setDownloading(false);
   };
 
@@ -128,7 +128,7 @@ export default function InvoiceDetail() {
         to: invoice.clientEmail,
         invoiceNumber: invoice.invoiceNumber,
         clientName: invoice.clientName,
-        businessName: profile?.businessName || 'GSTFlow',
+        businessName: profile?.businessName || 'Paavti',
         total: (invoice.total || 0).toLocaleString('en-IN'),
         date: invoice.date,
         pdfBase64: base64,
@@ -140,7 +140,7 @@ export default function InvoiceDetail() {
   };
 
   const handleWhatsApp = () => {
-    const msg = encodeURIComponent(`Hi ${invoice.clientName}, please find your invoice ${invoice.invoiceNumber} for Rs. ${(invoice.total || 0).toLocaleString('en-IN')} from ${profile?.businessName || 'GSTFlow'} dated ${invoice.date}. Thank you for your business!`);
+    const msg = encodeURIComponent(`Hi ${invoice.clientName}, please find your invoice ${invoice.invoiceNumber} for Rs. ${(invoice.total || 0).toLocaleString('en-IN')} from ${profile?.businessName || 'Paavti'} dated ${invoice.date}. Thank you for your business!`);
     window.open(`https://wa.me/?text=${msg}`, '_blank');
   };
 
@@ -208,8 +208,8 @@ export default function InvoiceDetail() {
       <div style={{ display: 'flex', minHeight: '100vh' }}>
         <aside className="sidebar">
           <div className="sidebar-logo">
-            <h1>GSTFlow</h1>
-            <p>Invoice Manager</p>
+            <h1>Paavti</h1>
+            <p>Business Manager</p>
           </div>
           <nav className="sidebar-nav">
             <div className="nav-label">Main</div>

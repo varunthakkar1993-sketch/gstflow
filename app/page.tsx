@@ -169,7 +169,7 @@ export default function Home() {
       <section id="features" className="features">
         <div className="section-label">Features</div>
         <h2 className="section-title">Everything your business needs</h2>
-        <p className="section-sub">From sending quotes to tracking expenses — GSTFlow is the only tool Indian freelancers and small businesses need.</p>
+        <p className="section-sub">From sending quotes to tracking expenses — Paavti is the only tool Indian freelancers and small businesses need.</p>
         <div className="features-grid">
           <div className="feature-card">
             <div className="feature-icon" style={{ background: '#eff6ff' }}>
@@ -250,8 +250,8 @@ export default function Home() {
       </section>
 
       <footer className="footer">
-        <div className="footer-logo">GSTFlow</div>
-        <div className="footer-copy">© 2026 GSTFlow. Built for India.</div>
+        <div className="footer-logo">Paavti</div>
+        <div className="footer-copy">© 2026 Paavti. Built for India.</div>
         <div className="footer-links">
           <a href="/login" className="footer-link">Login</a>
           <a href="/signup" className="footer-link">Sign Up</a>

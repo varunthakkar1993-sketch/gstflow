@@ -95,19 +95,19 @@ export default function QuoteDetail() {
     doc2.rect(0, pageHeight - 14, pageWidth, 14, 'F');
     doc2.setFontSize(8); doc2.setFont('helvetica', 'normal'); doc2.setTextColor(100, 110, 130);
     doc2.text('This is an estimate. Prices are subject to change.', 14, pageHeight - 6);
-    doc2.text('Made with GSTFlow.in', pageWidth - 14, pageHeight - 6, { align: 'right' });
+    doc2.text('Made with Paavti.in', pageWidth - 14, pageHeight - 6, { align: 'right' });
     return doc2;
   };
 
   const handleDownload = async () => {
     setDownloading(true);
     const doc2 = await buildPDF();
-    doc2.save(`GSTFlow-${quote.quoteNumber}.pdf`);
+    doc2.save(`Paavti-${quote.quoteNumber}.pdf`);
     setDownloading(false);
   };
 
   const handleWhatsApp = () => {
-    const msg = encodeURIComponent(`Hi ${quote.clientName}, please find your quote ${quote.quoteNumber} for Rs. ${(quote.total || 0).toLocaleString('en-IN')} from ${profile?.businessName || 'GSTFlow'}. Valid until ${quote.validUntil}.`);
+    const msg = encodeURIComponent(`Hi ${quote.clientName}, please find your quote ${quote.quoteNumber} for Rs. ${(quote.total || 0).toLocaleString('en-IN')} from ${profile?.businessName || 'Paavti'}. Valid until ${quote.validUntil}.`);
     window.open(`https://wa.me/?text=${msg}`, '_blank');
   };
 
@@ -161,7 +161,7 @@ export default function QuoteDetail() {
 
       <div style={{ display: 'flex', minHeight: '100vh' }}>
         <aside className="sidebar">
-          <div className="sidebar-logo"><h1>GSTFlow</h1><p>Invoice Manager</p></div>
+          <div className="sidebar-logo"><h1>Paavti</h1><p>Business Manager</p></div>
           <nav className="sidebar-nav">
             <div className="nav-label">Main</div>
             <a href="/dashboard" className="nav-item">

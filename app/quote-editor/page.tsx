@@ -120,7 +120,7 @@ export default function QuoteEditor() {
     doc2.rect(0, pageHeight - 14, pageWidth, 14, 'F');
     doc2.setFontSize(8); doc2.setFont('helvetica', 'normal'); doc2.setTextColor(100, 110, 130);
     doc2.text('This is an estimate. Prices are subject to change.', 14, pageHeight - 6);
-    doc2.text('Made with GSTFlow.in', pageWidth - 14, pageHeight - 6, { align: 'right' });
+    doc2.text('Made with Paavti.in', pageWidth - 14, pageHeight - 6, { align: 'right' });
     return doc2;
   };
 
@@ -128,7 +128,7 @@ export default function QuoteEditor() {
     setLoading(true);
     try {
       const doc2 = await buildPDF();
-      doc2.save(`GSTFlow-${quoteData.quoteNumber}.pdf`);
+      doc2.save(`Paavti-${quoteData.quoteNumber}.pdf`);
       await addDoc(collection(db, 'quotes'), {
         userId: user.uid,
         quoteNumber: quoteData.quoteNumber,
@@ -166,7 +166,7 @@ export default function QuoteEditor() {
           to: quoteData.clientEmail,
           invoiceNumber: quoteData.quoteNumber,
           clientName: quoteData.clientName,
-          businessName: profile?.businessName || 'GSTFlow',
+          businessName: profile?.businessName || 'Paavti',
           total: total.toLocaleString('en-IN'),
           date: quoteData.date,
           pdfBase64: base64,
@@ -179,7 +179,7 @@ export default function QuoteEditor() {
   };
 
   const sendWhatsApp = () => {
-    const msg = encodeURIComponent(`Hi ${quoteData.clientName}, please find your quote ${quoteData.quoteNumber} for Rs. ${total.toLocaleString('en-IN')} from ${profile?.businessName || 'GSTFlow'}. Valid until ${quoteData.validUntil}.`);
+    const msg = encodeURIComponent(`Hi ${quoteData.clientName}, please find your quote ${quoteData.quoteNumber} for Rs. ${total.toLocaleString('en-IN')} from ${profile?.businessName || 'Paavti'}. Valid until ${quoteData.validUntil}.`);
     window.open(`https://wa.me/?text=${msg}`, '_blank');
   };
 
@@ -248,7 +248,7 @@ export default function QuoteEditor() {
 
       <div className="root">
         <aside className="sidebar">
-          <div className="sidebar-logo"><h1>GSTFlow</h1><p>Invoice Manager</p></div>
+          <div className="sidebar-logo"><h1>Paavti</h1><p>Business Manager</p></div>
           <nav className="sidebar-nav">
             <div className="nav-label">Main</div>
             <a href="/dashboard" className="nav-item">

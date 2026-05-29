@@ -173,8 +173,8 @@ export default function Dashboard() {
       <div className="dash-root">
         <aside className="sidebar">
           <div className="sidebar-logo">
-            <h1>GSTFlow</h1>
-            <p>Invoice Manager</p>
+            <h1>Paavti</h1>
+            <p>Business Manager</p>
           </div>
           <nav className="sidebar-nav">
             <div className="nav-label">Main</div>

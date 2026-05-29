@@ -19,7 +19,7 @@ export async function POST(req: NextRequest) {
           <p>The invoice PDF is attached to this email.</p>
           <br/>
           <p>Thank you for your business!</p>
-          <p style="color: #666; font-size: 12px;">Sent via GSTFlow.in</p>
+          <p style="color: #666; font-size: 12px;">Sent via Paavti.in</p>
         </div>
       `,
       attachments: [

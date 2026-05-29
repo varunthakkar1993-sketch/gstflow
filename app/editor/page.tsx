@@ -236,7 +236,7 @@ export default function InvoiceEditor() {
     doc2.setFontSize(8); doc2.setFont('helvetica', 'normal');
     doc2.setTextColor(100, 110, 130);
     doc2.text('Thank you for your business!', 14, pageHeight - 6);
-    doc2.text('Made with GSTFlow.in', pageWidth - 14, pageHeight - 6, { align: 'right' });
+    doc2.text('Made with Paavti.in', pageWidth - 14, pageHeight - 6, { align: 'right' });
 
     return doc2;
   };
@@ -245,7 +245,7 @@ export default function InvoiceEditor() {
     setLoading(true);
     try {
       const doc2 = await buildPDF();
-      doc2.save(`GSTFlow-${invoiceData.invoiceNumber}.pdf`);
+      doc2.save(`Paavti-${invoiceData.invoiceNumber}.pdf`);
       const base64 = doc2.output('datauristring').split(',')[1];
       setPdfBase64(base64);
       await addDoc(collection(db, 'invoices'), {
@@ -283,7 +283,7 @@ export default function InvoiceEditor() {
           to: invoiceData.clientEmail,
           invoiceNumber: invoiceData.invoiceNumber,
           clientName: invoiceData.clientName,
-          businessName: profile?.businessName || 'GSTFlow',
+          businessName: profile?.businessName || 'Paavti',
           total: total.toLocaleString('en-IN'),
           date: invoiceData.date,
           pdfBase64,
@@ -296,7 +296,7 @@ export default function InvoiceEditor() {
   };
 
   const sendWhatsApp = () => {
-    const msg = encodeURIComponent(`Hi ${invoiceData.clientName}, please find your invoice ${invoiceData.invoiceNumber} for Rs. ${total.toLocaleString('en-IN')} from ${profile?.businessName || 'GSTFlow'} dated ${invoiceData.date}. Thank you for your business!`);
+    const msg = encodeURIComponent(`Hi ${invoiceData.clientName}, please find your invoice ${invoiceData.invoiceNumber} for Rs. ${total.toLocaleString('en-IN')} from ${profile?.businessName || 'Paavti'} dated ${invoiceData.date}. Thank you for your business!`);
     window.open(`https://wa.me/?text=${msg}`, '_blank');
   };
 
@@ -369,8 +369,8 @@ export default function InvoiceEditor() {
       <div className="editor-root">
         <aside className="sidebar">
           <div className="sidebar-logo">
-            <h1>GSTFlow</h1>
-            <p>Invoice Manager</p>
+            <h1>Paavti</h1>
+            <p>Business Manager</p>
           </div>
           <nav className="sidebar-nav">
             <div className="nav-label">Main</div>

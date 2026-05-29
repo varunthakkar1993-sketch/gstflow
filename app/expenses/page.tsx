@@ -185,7 +185,7 @@ export default function ExpensesPage() {
 
       <div className="root">
         <aside className="sidebar">
-          <div className="sidebar-logo"><h1>GSTFlow</h1><p>Invoice Manager</p></div>
+          <div className="sidebar-logo"><h1>Paavti</h1><p>Business Manager</p></div>
           <nav className="sidebar-nav">
             <div className="nav-label">Main</div>
             <a href="/dashboard" className="nav-item"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>Dashboard</a>
