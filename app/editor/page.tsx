@@ -38,7 +38,24 @@ export default function InvoiceEditor() {
       const countSnap = await getCountFromServer(q);
       const count = countSnap.data().count + 1;
       const invoiceNumber = `INV-${String(count).padStart(3, '0')}`;
-      setInvoiceData(prev => ({ ...prev, invoiceNumber }));
+      // Check if new=1 to reset form, otherwise just set invoice number
+      const urlParams = new URLSearchParams(window.location.search);
+      if (urlParams.get('new') === '1') {
+        setInvoiceData({
+          invoiceNumber,
+          date: new Date().toISOString().split('T')[0],
+          clientName: '',
+          clientEmail: '',
+          clientAddress: '',
+          clientGSTIN: '',
+          description: 'Web Development Services',
+          amount: '5000',
+          isIntraState: 'true',
+          gstRate: '18',
+        });
+      } else {
+        setInvoiceData(prev => ({ ...prev, invoiceNumber }));
+      }
     });
   }, []);
 
@@ -46,21 +63,6 @@ export default function InvoiceEditor() {
   useEffect(() => {
     if (typeof window === 'undefined') return;
     const params = new URLSearchParams(window.location.search);
-    // If new=1, reset form to blank
-    if (params.get('new') === '1') {
-      setInvoiceData(prev => ({
-        ...prev,
-        clientName: '',
-        clientEmail: '',
-        clientAddress: '',
-        clientGSTIN: '',
-        description: 'Web Development Services',
-        amount: '5000',
-        isIntraState: 'true',
-        gstRate: '18',
-      }));
-      return;
-    }
     const fromQuote = params.get('from_quote');
     const clientName = params.get('clientName') || '';
     const clientEmail = params.get('clientEmail') || '';
