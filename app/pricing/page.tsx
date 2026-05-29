@@ -1,9 +1,85 @@
 'use client';
 
 import { useState } from 'react';
+import { onAuthStateChanged } from 'firebase/auth';
+import { auth } from '../../lib/firebase';
+import { useEffect } from 'react';
+
+declare global {
+  interface Window {
+    Razorpay: any;
+  }
+}
 
 export default function PricingPage() {
   const [billing, setBilling] = useState<'monthly' | 'yearly'>('yearly');
+  const [user, setUser] = useState<any>(null);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (u) => setUser(u));
+    return () => unsubscribe();
+  }, []);
+
+  const loadRazorpay = () => new Promise((resolve) => {
+    const script = document.createElement('script');
+    script.src = 'https://checkout.razorpay.com/v1/checkout.js';
+    script.onload = () => resolve(true);
+    script.onerror = () => resolve(false);
+    document.body.appendChild(script);
+  });
+
+  const handlePayment = async (plan: string, billingType: string) => {
+    if (!user) { window.location.href = '/signup'; return; }
+    setLoading(true);
+    try {
+      const loaded = await loadRazorpay();
+      if (!loaded) { alert('Failed to load payment gateway. Please try again.'); return; }
+
+      const res = await fetch('/api/razorpay-order', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ plan, billing: billingType }),
+      });
+      const { orderId, amount, currency, keyId } = await res.json();
+
+      const options = {
+        key: keyId,
+        amount,
+        currency,
+        name: 'Paavti',
+        description: `Pro ${billingType === 'lifetime' ? 'Lifetime' : billingType === 'yearly' ? 'Yearly' : 'Monthly'} Plan`,
+        order_id: orderId,
+        handler: async (response: any) => {
+          const verify = await fetch('/api/razorpay-verify', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              ...response,
+              userId: user.uid,
+              plan,
+              billing: billingType,
+            }),
+          });
+          const result = await verify.json();
+          if (result.success) {
+            window.location.href = '/dashboard?upgraded=true';
+          } else {
+            alert('Payment verification failed. Please contact support.');
+          }
+        },
+        prefill: { email: user.email },
+        theme: { color: '#2563eb' },
+      };
+
+      const rzp = new window.Razorpay(options);
+      rzp.open();
+    } catch (err) {
+      alert('Something went wrong. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <>
@@ -50,6 +126,7 @@ export default function PricingPage() {
         .plan-btn.primary:hover { background: #1d4ed8; }
         .plan-btn.dark { background: #0f1f5c; color: #fff; }
         .plan-btn.dark:hover { background: #1a2f7a; }
+        .plan-btn:disabled { opacity: 0.6; cursor: not-allowed; }
         .yearly-note { font-size: 12px; color: #16a34a; text-align: center; margin-top: 10px; font-weight: 500; }
         .faq { max-width: 640px; margin: 0 auto; padding: 0 60px 80px; }
         .faq-title { font-family: 'Lora', serif; font-size: 26px; font-weight: 700; color: #0f1f5c; margin-bottom: 32px; text-align: center; }
@@ -124,7 +201,9 @@ export default function PricingPage() {
             <li className="feature-item"><span className="check"><svg width="10" height="10" viewBox="0 0 12 12" fill="none"><path d="M2 6l3 3 5-5" stroke="#16a34a" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg></span>WhatsApp sharing</li>
             <li className="feature-item"><span className="check"><svg width="10" height="10" viewBox="0 0 12 12" fill="none"><path d="M2 6l3 3 5-5" stroke="#16a34a" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg></span>Business dashboard</li>
           </ul>
-          <a href="/signup" className="plan-btn primary">Start Pro Free</a>
+          <button className="plan-btn primary" disabled={loading} onClick={() => handlePayment('pro', billing)}>
+            {loading ? 'Processing...' : 'Start Pro Free'}
+          </button>
           {billing === 'yearly' && <div className="yearly-note">You save Rs. 1,089 a year</div>}
         </div>
 
@@ -141,7 +220,9 @@ export default function PricingPage() {
             <li className="feature-item"><span className="check"><svg width="10" height="10" viewBox="0 0 12 12" fill="none"><path d="M2 6l3 3 5-5" stroke="#16a34a" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg></span>Priority support</li>
             <li className="feature-item"><span className="check"><svg width="10" height="10" viewBox="0 0 12 12" fill="none"><path d="M2 6l3 3 5-5" stroke="#16a34a" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg></span>Founding member status</li>
           </ul>
-          <a href="/signup" className="plan-btn dark">Get Lifetime Access</a>
+          <button className="plan-btn dark" disabled={loading} onClick={() => handlePayment('pro', 'lifetime')}>
+            {loading ? 'Processing...' : 'Get Lifetime Access'}
+          </button>
           <div className="yearly-note" style={{ color: '#6b7280' }}>Equivalent to ~20 months of Pro</div>
         </div>
       </div>
