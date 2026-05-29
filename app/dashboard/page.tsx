@@ -9,6 +9,7 @@ export default function Dashboard() {
   const [user, setUser] = useState<any>(null);
   const [invoices, setInvoices] = useState<any[]>([]);
   const [totalExpenses, setTotalExpenses] = useState(0);
+  const [totalExpenses, setTotalExpenses] = useState(0);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -23,6 +24,12 @@ export default function Dashboard() {
           console.error('Firestore error:', err?.message);
           setInvoices([]);
         }
+        try {
+          const eq = query(collection(db, 'expenses'), where('userId', '==', currentUser.uid));
+          const esnap = await getDocs(eq);
+          const expTotal = esnap.docs.reduce((sum, d) => sum + (d.data().amount || 0), 0);
+          setTotalExpenses(expTotal);
+        } catch (e) {}
         try {
           const eq = query(collection(db, 'expenses'), where('userId', '==', currentUser.uid));
           const esnap = await getDocs(eq);
@@ -228,6 +235,19 @@ export default function Dashboard() {
               <div className="stat-label">Pending</div>
               <div className="stat-value">{unpaidCount}</div>
               <div className="stat-sub">Unpaid invoice{unpaidCount !== 1 ? 's' : ''}</div>
+            </div>
+          </div>
+
+          <div style={{ background: '#fff', borderRadius: 12, padding: '16px 24px', border: '1px solid #e5e9f5', marginBottom: 24, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <div>
+              <div style={{ fontSize: 12, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.6px', fontWeight: 500 }}>Net Profit (Revenue - Expenses)</div>
+              <div style={{ fontFamily: 'Lora, serif', fontSize: 24, fontWeight: 600, color: (totalRevenue - totalExpenses) >= 0 ? '#16a34a' : '#dc2626', marginTop: 4 }}>
+                Rs. {(totalRevenue - totalExpenses).toLocaleString('en-IN')}
+              </div>
+            </div>
+            <div style={{ textAlign: 'right' }}>
+              <div style={{ fontSize: 12, color: '#9ca3af' }}>Revenue: Rs. {totalRevenue.toLocaleString('en-IN')}</div>
+              <div style={{ fontSize: 12, color: '#dc2626', marginTop: 2 }}>Expenses: Rs. {totalExpenses.toLocaleString('en-IN')}</div>
             </div>
           </div>
 
