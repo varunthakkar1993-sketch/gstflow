@@ -8,6 +8,7 @@ import { collection, query, where, getDocs, orderBy, doc, updateDoc } from 'fire
 export default function Dashboard() {
   const [user, setUser] = useState<any>(null);
   const [invoices, setInvoices] = useState<any[]>([]);
+  const [totalExpenses, setTotalExpenses] = useState(0);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -22,6 +23,12 @@ export default function Dashboard() {
           console.error('Firestore error:', err?.message);
           setInvoices([]);
         }
+        try {
+          const eq = query(collection(db, 'expenses'), where('userId', '==', currentUser.uid));
+          const esnap = await getDocs(eq);
+          const expTotal = esnap.docs.reduce((sum, d) => sum + (d.data().amount || 0), 0);
+          setTotalExpenses(expTotal);
+        } catch (e) {}
       } else {
         window.location.href = '/login';
       }
@@ -169,6 +176,10 @@ export default function Dashboard() {
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
               Quotes
             </a>
+            <a href="/expenses" className="nav-item">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+              Expenses
+            </a>
             <div className="nav-label">Settings</div>
             <a href="/profile" className="nav-item">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
@@ -217,6 +228,19 @@ export default function Dashboard() {
               <div className="stat-label">Pending</div>
               <div className="stat-value">{unpaidCount}</div>
               <div className="stat-sub">Unpaid invoice{unpaidCount !== 1 ? 's' : ''}</div>
+            </div>
+          </div>
+
+          <div style={{ background: '#fff', borderRadius: 12, padding: '16px 24px', border: '1px solid #e5e9f5', marginBottom: 24, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <div>
+              <div style={{ fontSize: 12, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.6px', fontWeight: 500 }}>Net Profit (Revenue - Expenses)</div>
+              <div style={{ fontFamily: 'Lora, serif', fontSize: 24, fontWeight: 600, color: (totalRevenue - totalExpenses) >= 0 ? '#16a34a' : '#dc2626', marginTop: 4 }}>
+                Rs. {(totalRevenue - totalExpenses).toLocaleString('en-IN')}
+              </div>
+            </div>
+            <div style={{ textAlign: 'right' }}>
+              <div style={{ fontSize: 12, color: '#9ca3af' }}>Revenue: Rs. {totalRevenue.toLocaleString('en-IN')}</div>
+              <div style={{ fontSize: 12, color: '#dc2626', marginTop: 2 }}>Expenses: Rs. {totalExpenses.toLocaleString('en-IN')}</div>
             </div>
           </div>
 
