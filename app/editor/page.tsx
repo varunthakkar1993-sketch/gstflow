@@ -87,7 +87,7 @@ export default function InvoiceEditor() {
   const rate = parseFloat(invoiceData.gstRate) / 100 || 0;
   const taxAmount = subtotal * rate;
   const isIntra = invoiceData.isIntraState === 'true';
-  const total = subtotal + (isIntra ? taxAmount * 2 : taxAmount);
+  const total = subtotal + taxAmount;
 
   const buildPDF = async () => {
     const doc2 = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });

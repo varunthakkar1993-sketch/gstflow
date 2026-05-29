@@ -74,9 +74,9 @@ export default function InvoiceDetail() {
     doc2.setFont('helvetica', 'bold');
     if (invoice.isIntraState) {
       doc2.text(`CGST (${parseFloat(invoice.gstRate) / 2}%)`, 20, y);
-      doc2.text(taxAmount.toFixed(2), pageWidth - 20, y, { align: 'right' }); y += 7;
+      doc2.text((taxAmount/2).toFixed(2), pageWidth - 20, y, { align: 'right' }); y += 7;
       doc2.text(`SGST (${parseFloat(invoice.gstRate) / 2}%)`, 20, y);
-      doc2.text(taxAmount.toFixed(2), pageWidth - 20, y, { align: 'right' }); y += 7;
+      doc2.text((taxAmount/2).toFixed(2), pageWidth - 20, y, { align: 'right' }); y += 7;
     } else {
       doc2.text(`IGST (${invoice.gstRate}%)`, 20, y);
       doc2.text(taxAmount.toFixed(2), pageWidth - 20, y, { align: 'right' }); y += 7;
