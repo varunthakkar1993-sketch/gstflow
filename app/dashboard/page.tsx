@@ -152,7 +152,7 @@ export default function Dashboard() {
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
               Dashboard
             </a>
-            <a href="/editor?new=1" className="nav-item">
+            <a href="/editor" onClick={(e: any) => { e.preventDefault(); window.location.href = "/editor?new=" + Date.now(); }} className="nav-item">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/></svg>
               New Invoice
             </a>
@@ -221,7 +221,7 @@ export default function Dashboard() {
           </div>
 
           <div className="quick-actions">
-            <a href="/editor?new=1" className="action-card">
+            <a href="/editor" onClick={(e: any) => { e.preventDefault(); window.location.href = "/editor?new=" + Date.now(); }} className="action-card">
               <div className="action-icon" style={{ background: '#eff6ff' }}>
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#2563eb" strokeWidth="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/></svg>
               </div>
@@ -243,7 +243,7 @@ export default function Dashboard() {
 
           <div className="section-header">
             <div className="section-title">Recent Invoices</div>
-            <a href="/editor?new=1" className="new-btn">
+            <a href="/editor" onClick={(e: any) => { e.preventDefault(); window.location.href = "/editor?new=" + Date.now(); }} className="new-btn">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
               New Invoice
             </a>
@@ -265,7 +265,7 @@ export default function Dashboard() {
                 </div>
                 <div className="empty-title">No invoices yet</div>
                 <div className="empty-sub">Create your first invoice to get started</div>
-                <a href="/editor?new=1" className="new-btn" style={{ margin: '0 auto', display: 'inline-flex' }}>Create Invoice</a>
+                <a href="/editor" onClick={(e: any) => { e.preventDefault(); window.location.href = "/editor?new=" + Date.now(); }} className="new-btn" style={{ margin: '0 auto', display: 'inline-flex' }}>Create Invoice</a>
               </div>
             ) : (
               invoices.map((inv) => (
