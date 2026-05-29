@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { onAuthStateChanged, signOut } from 'firebase/auth';
 import { auth, db } from '../../lib/firebase';
-import { collection, query, where, getDocs, orderBy, doc, updateDoc } from 'firebase/firestore';
+import { collection, query, where, getDocs, orderBy, doc, updateDoc, getDoc } from 'firebase/firestore';
 
 export default function Dashboard() {
   const [user, setUser] = useState<any>(null);
@@ -11,6 +11,8 @@ export default function Dashboard() {
   const [totalExpenses, setTotalExpenses] = useState(0);
   const [thisMonthExpenses, setThisMonthExpenses] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [isPro, setIsPro] = useState(false);
+  const [showLimitModal, setShowLimitModal] = useState(false);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
@@ -39,18 +41,8 @@ export default function Dashboard() {
           setThisMonthExpenses(thisMonthExp);
         } catch (e) {}
         try {
-          const eq = query(collection(db, 'expenses'), where('userId', '==', currentUser.uid));
-          const esnap = await getDocs(eq);
-          const expTotal = esnap.docs.reduce((sum, d) => sum + (d.data().amount || 0), 0);
-          setTotalExpenses(expTotal);
-          const now = new Date();
-          const thisMonthExp = esnap.docs
-            .filter(d => {
-              const date = new Date(d.data().date);
-              return date.getMonth() === now.getMonth() && date.getFullYear() === now.getFullYear();
-            })
-            .reduce((sum, d) => sum + (d.data().amount || 0), 0);
-          setThisMonthExpenses(thisMonthExp);
+          const subDoc = await getDoc(doc(db, 'subscriptions', currentUser.uid));
+          if (subDoc.exists() && subDoc.data()?.status === 'active') setIsPro(true);
         } catch (e) {}
       } else {
         window.location.href = '/login';
@@ -76,6 +68,15 @@ export default function Dashboard() {
     return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
   });
   const thisMonthRevenue = thisMonth.reduce((sum, inv) => sum + (inv.total || 0), 0);
+  const thisMonthInvoiceCount = thisMonth.length;
+  const freeLimit = 5;
+  const atLimit = !isPro && thisMonthInvoiceCount >= freeLimit;
+
+  const handleNewInvoice = (e: any) => {
+    e.preventDefault();
+    if (atLimit) { setShowLimitModal(true); return; }
+    window.location.href = '/editor?new=' + Date.now();
+  };
 
   const handleLogout = async () => {
     await signOut(auth);
@@ -120,6 +121,8 @@ export default function Dashboard() {
         .nav-item { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 8px; color: rgba(255,255,255,0.6); font-size: 13.5px; font-weight: 400; text-decoration: none; transition: all 0.15s; cursor: pointer; border: none; background: none; width: 100%; text-align: left; }
         .nav-item:hover { background: rgba(255,255,255,0.08); color: #fff; }
         .nav-item.active { background: rgba(99,130,255,0.2); color: #fff; font-weight: 500; }
+        .upgrade-btn { display: flex; align-items: center; gap: 8px; margin: 12px 12px 0; padding: 11px 14px; background: linear-gradient(135deg, #2563eb, #4f46e5); color: #fff; border-radius: 9px; font-size: 13px; font-weight: 600; text-decoration: none; transition: opacity 0.15s; }
+        .upgrade-btn:hover { opacity: 0.9; }
         .sidebar-footer { padding: 16px 12px; border-top: 1px solid rgba(255,255,255,0.08); }
         .user-chip { display: flex; align-items: center; gap: 10px; padding: 8px 12px; }
         .user-avatar { width: 32px; height: 32px; background: linear-gradient(135deg, #6382ff, #3b5bdb); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #fff; font-size: 13px; font-weight: 600; flex-shrink: 0; }
@@ -127,6 +130,13 @@ export default function Dashboard() {
         .logout-btn { display: flex; align-items: center; gap: 8px; padding: 8px 12px; color: rgba(255,255,255,0.4); font-size: 12px; cursor: pointer; border: none; background: none; width: 100%; border-radius: 6px; transition: all 0.15s; margin-top: 4px; }
         .logout-btn:hover { color: #ff6b6b; background: rgba(255,107,107,0.1); }
         .main { margin-left: 240px; flex: 1; padding: 36px 40px; }
+        .upgrade-banner { background: linear-gradient(135deg, #eff6ff, #f5f3ff); border: 1.5px solid #dbeafe; border-radius: 12px; padding: 14px 20px; margin-bottom: 24px; display: flex; align-items: center; justify-content: space-between; }
+        .upgrade-banner-text { font-size: 13.5px; color: #1e40af; font-weight: 500; }
+        .upgrade-banner-sub { font-size: 12px; color: #6b7280; margin-top: 2px; }
+        .upgrade-banner-btn { background: #2563eb; color: #fff; padding: 8px 18px; border-radius: 7px; font-size: 13px; font-weight: 600; text-decoration: none; white-space: nowrap; transition: background 0.15s; }
+        .upgrade-banner-btn:hover { background: #1d4ed8; }
+        .progress-bar { height: 4px; background: #e5e9f5; border-radius: 4px; margin-top: 8px; overflow: hidden; width: 200px; }
+        .progress-fill { height: 100%; border-radius: 4px; transition: width 0.3s; }
         .page-header { margin-bottom: 32px; }
         .page-header h2 { font-family: 'Lora', serif; font-size: 26px; color: #0f1f5c; font-weight: 600; }
         .page-header p { color: #6b7280; font-size: 14px; margin-top: 4px; }
@@ -142,15 +152,15 @@ export default function Dashboard() {
         .stat-sub { font-size: 12px; color: #9ca3af; margin-top: 4px; }
         .section-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
         .section-title { font-family: 'Lora', serif; font-size: 17px; color: #0f1f5c; font-weight: 600; }
-        .new-btn { display: inline-flex; align-items: center; gap: 6px; background: #2563eb; color: #fff; padding: 9px 18px; border-radius: 8px; font-size: 13px; font-weight: 500; text-decoration: none; transition: background 0.15s; }
+        .new-btn { display: inline-flex; align-items: center; gap: 6px; background: #2563eb; color: #fff; padding: 9px 18px; border-radius: 8px; font-size: 13px; font-weight: 500; text-decoration: none; transition: background 0.15s; border: none; cursor: pointer; font-family: 'DM Sans', sans-serif; }
         .new-btn:hover { background: #1d4ed8; }
+        .new-btn.disabled { background: #9ca3af; cursor: not-allowed; }
         .invoice-table { background: #fff; border-radius: 12px; border: 1px solid #e5e9f5; overflow: hidden; }
         .table-head { display: grid; grid-template-columns: 1fr 2fr 1.5fr 1fr 1fr; gap: 16px; padding: 12px 24px; background: #f8faff; border-bottom: 1px solid #e5e9f5; }
         .th { font-size: 12px; color: #9ca3af; text-transform: uppercase; letter-spacing: 0.7px; font-weight: 600; }
         .table-row { display: grid; grid-template-columns: 1fr 2fr 1.5fr 1fr 1fr; gap: 16px; padding: 16px 24px; border-bottom: 1px solid #f3f4f6; align-items: center; transition: background 0.1s; }
         .table-row:last-child { border-bottom: none; }
         .table-row:hover { background: #f8faff; }
-        .inv-number { font-size: 14px; font-weight: 600; color: #2563eb; }
         .inv-client { font-size: 14px; color: #111827; font-weight: 500; }
         .inv-client-email { font-size: 13px; color: #9ca3af; margin-top: 1px; }
         .inv-amount { font-size: 14px; font-weight: 600; color: #111827; font-family: 'Lora', serif; }
@@ -159,7 +169,7 @@ export default function Dashboard() {
         .status-badge:hover { opacity: 0.8; }
         .status-hint { font-size: 11px; color: #9ca3af; margin-top: 3px; }
         .quick-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 32px; }
-        .action-card { background: #fff; border: 1px solid #e5e9f5; border-radius: 12px; padding: 20px 24px; display: flex; align-items: center; gap: 16px; text-decoration: none; transition: all 0.15s; }
+        .action-card { background: #fff; border: 1px solid #e5e9f5; border-radius: 12px; padding: 20px 24px; display: flex; align-items: center; gap: 16px; text-decoration: none; transition: all 0.15s; cursor: pointer; }
         .action-card:hover { border-color: #2563eb; box-shadow: 0 0 0 3px rgba(37,99,235,0.08); }
         .action-icon { width: 42px; height: 42px; border-radius: 10px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
         .action-title { font-size: 14px; font-weight: 600; color: #0f1f5c; }
@@ -168,6 +178,15 @@ export default function Dashboard() {
         .empty-icon { width: 56px; height: 56px; background: #eff6ff; border-radius: 14px; display: flex; align-items: center; justify-content: center; margin: 0 auto 16px; }
         .empty-title { font-family: 'Lora', serif; font-size: 17px; color: #0f1f5c; font-weight: 600; margin-bottom: 6px; }
         .empty-sub { font-size: 13.5px; color: #9ca3af; margin-bottom: 20px; }
+        .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 50; display: flex; align-items: center; justify-content: center; }
+        .modal { background: #fff; border-radius: 16px; width: 440px; padding: 36px; text-align: center; }
+        .modal-icon { width: 56px; height: 56px; background: #fff7ed; border-radius: 14px; display: flex; align-items: center; justify-content: center; margin: 0 auto 20px; }
+        .modal-title { font-family: 'Lora', serif; font-size: 20px; color: #0f1f5c; font-weight: 600; margin-bottom: 10px; }
+        .modal-sub { font-size: 14px; color: #6b7280; line-height: 1.6; margin-bottom: 28px; }
+        .modal-btn-primary { display: block; width: 100%; background: #2563eb; color: #fff; padding: 12px; border-radius: 9px; font-size: 14px; font-weight: 600; text-decoration: none; margin-bottom: 10px; transition: background 0.15s; }
+        .modal-btn-primary:hover { background: #1d4ed8; }
+        .modal-btn-secondary { display: block; width: 100%; background: #f3f4f6; color: #374151; padding: 12px; border-radius: 9px; font-size: 14px; font-weight: 500; border: none; cursor: pointer; font-family: 'DM Sans', sans-serif; }
+        .modal-btn-secondary:hover { background: #e5e7eb; }
       `}</style>
 
       <div className="dash-root">
@@ -182,7 +201,7 @@ export default function Dashboard() {
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
               Dashboard
             </a>
-            <a href="/editor" onClick={(e: any) => { e.preventDefault(); window.location.href = "/editor?new=" + Date.now(); }} className="nav-item">
+            <a href="/editor" onClick={handleNewInvoice} className="nav-item">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/></svg>
               New Invoice
             </a>
@@ -203,7 +222,10 @@ export default function Dashboard() {
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
               Expenses
             </a>
-            <a href="/clients" className="nav-item"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>Clients</a>
+            <a href="/clients" className="nav-item">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+              Clients
+            </a>
             <div className="nav-label">Settings</div>
             <a href="/profile" className="nav-item">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
@@ -213,6 +235,12 @@ export default function Dashboard() {
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg>
               Templates
             </a>
+            {!isPro && (
+              <a href="/pricing" className="upgrade-btn">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+                Upgrade to Pro
+              </a>
+            )}
           </nav>
           <div className="sidebar-footer">
             <div className="user-chip">
@@ -231,6 +259,23 @@ export default function Dashboard() {
             <h2>Good {new Date().getHours() < 12 ? 'morning' : new Date().getHours() < 17 ? 'afternoon' : 'evening'}, {user?.email?.split('@')[0]} 👋</h2>
             <p>Here's what's happening with your invoices.</p>
           </div>
+
+          {!isPro && (
+            <div className="upgrade-banner">
+              <div>
+                <div className="upgrade-banner-text">
+                  {atLimit ? '🔒 Invoice limit reached for this month' : `${thisMonthInvoiceCount}/${freeLimit} invoices used this month`}
+                </div>
+                <div className="upgrade-banner-sub">
+                  {atLimit ? 'Upgrade to Pro for unlimited invoices, quotes and more.' : `${freeLimit - thisMonthInvoiceCount} invoices remaining. Upgrade for unlimited access.`}
+                </div>
+                <div className="progress-bar">
+                  <div className="progress-fill" style={{ width: `${Math.min((thisMonthInvoiceCount / freeLimit) * 100, 100)}%`, background: atLimit ? '#dc2626' : 'linear-gradient(90deg, #2563eb, #4f46e5)' }} />
+                </div>
+              </div>
+              <a href="/pricing" className="upgrade-banner-btn">Upgrade to Pro →</a>
+            </div>
+          )}
 
           <div className="stats-grid">
             <div className="stat-card blue">
@@ -269,15 +314,15 @@ export default function Dashboard() {
           </div>
 
           <div className="quick-actions">
-            <a href="/editor" onClick={(e: any) => { e.preventDefault(); window.location.href = "/editor?new=" + Date.now(); }} className="action-card">
+            <div onClick={handleNewInvoice} className="action-card">
               <div className="action-icon" style={{ background: '#eff6ff' }}>
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#2563eb" strokeWidth="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/></svg>
               </div>
               <div>
                 <div className="action-title">Create New Invoice</div>
-                <div className="action-sub">Generate a GST-compliant invoice</div>
+                <div className="action-sub">{atLimit ? '⚠ Limit reached — upgrade to continue' : 'Generate a GST-compliant invoice'}</div>
               </div>
-            </a>
+            </div>
             <a href="/profile" className="action-card">
               <div className="action-icon" style={{ background: '#f5f3ff' }}>
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#7c3aed" strokeWidth="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
@@ -291,10 +336,10 @@ export default function Dashboard() {
 
           <div className="section-header">
             <div className="section-title">Recent Invoices</div>
-            <a href="/editor" onClick={(e: any) => { e.preventDefault(); window.location.href = "/editor?new=" + Date.now(); }} className="new-btn">
+            <button onClick={handleNewInvoice} className={`new-btn ${atLimit ? 'disabled' : ''}`}>
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
               New Invoice
-            </a>
+            </button>
           </div>
 
           <div className="invoice-table">
@@ -305,7 +350,6 @@ export default function Dashboard() {
               <div className="th">Date</div>
               <div className="th">Status</div>
             </div>
-
             {invoices.length === 0 ? (
               <div className="empty-state">
                 <div className="empty-icon">
@@ -313,7 +357,7 @@ export default function Dashboard() {
                 </div>
                 <div className="empty-title">No invoices yet</div>
                 <div className="empty-sub">Create your first invoice to get started</div>
-                <a href="/editor" onClick={(e: any) => { e.preventDefault(); window.location.href = "/editor?new=" + Date.now(); }} className="new-btn" style={{ margin: '0 auto', display: 'inline-flex' }}>Create Invoice</a>
+                <button onClick={handleNewInvoice} className="new-btn" style={{ margin: '0 auto', display: 'inline-flex' }}>Create Invoice</button>
               </div>
             ) : (
               invoices.map((inv) => (
@@ -326,12 +370,7 @@ export default function Dashboard() {
                   <div className="inv-amount">Rs. {(inv.total || 0).toLocaleString('en-IN')}</div>
                   <div className="inv-date">{inv.date || '—'}</div>
                   <div>
-                    <button
-                      className="status-badge"
-                      style={statusStyle(inv.status || 'sent')}
-                      onClick={() => toggleStatus(inv)}
-                      title="Click to change status"
-                    >
+                    <button className="status-badge" style={statusStyle(inv.status || 'sent')} onClick={() => toggleStatus(inv)} title="Click to change status">
                       {statusLabel(inv.status || 'sent')}
                     </button>
                     <div className="status-hint">click to change</div>
@@ -342,6 +381,20 @@ export default function Dashboard() {
           </div>
         </main>
       </div>
+
+      {showLimitModal && (
+        <div className="modal-overlay" onClick={() => setShowLimitModal(false)}>
+          <div className="modal" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-icon">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#ea580c" strokeWidth="2"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+            </div>
+            <div className="modal-title">Monthly limit reached</div>
+            <div className="modal-sub">You have used all 5 free invoices this month. Upgrade to Pro for unlimited invoices, quotes, expense tracking and more.</div>
+            <a href="/pricing" className="modal-btn-primary">Upgrade to Pro →</a>
+            <button className="modal-btn-secondary" onClick={() => setShowLimitModal(false)}>Maybe later</button>
+          </div>
+        </div>
+      )}
     </>
   );
 }
