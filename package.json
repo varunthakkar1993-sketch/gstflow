@@ -13,6 +13,7 @@
     "@pdfme/generator": "^6.1.2",
     "@sendgrid/mail": "^8.1.6",
     "firebase": "^12.13.0",
+    "firebase-admin": "^13.10.0",
     "jspdf": "^4.2.1",
     "next": "16.2.6",
     "qrcode": "^1.5.4",
