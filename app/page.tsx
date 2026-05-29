@@ -126,17 +126,17 @@ export default function Home() {
           <div className="mock-body">
             <div className="mock-inv-header">
               <div>
-                <div className="mock-biz">Clarvit Technologies</div>
-                <div className="mock-biz-sub">GSTIN: 27AAABC1234D1Z5</div>
-                <div className="mock-biz-sub">Mumbai, Maharashtra</div>
+                <div className="mock-biz">XYZ Technologies</div>
+                <div className="mock-biz-sub">GSTIN: 27XYZAB1234C1Z5</div>
+                <div className="mock-biz-sub">Delhi, India</div>
               </div>
               <div>
                 <div className="mock-inv-label">INVOICE</div>
-                <div className="mock-inv-num">INV-007 · 28 May 2026</div>
+                <div className="mock-inv-num">INV-001 · 29 May 2026</div>
               </div>
             </div>
             <div className="mock-divider" />
-            <div className="mock-row"><span className="mock-row-label">Client</span><span className="mock-row-value">Manifest.ai</span></div>
+            <div className="mock-row"><span className="mock-row-label">Client</span><span className="mock-row-value">ABC Consultants</span></div>
             <div className="mock-row"><span className="mock-row-label">Description</span><span className="mock-row-value">Web Development</span></div>
             <div className="mock-divider" />
             <div className="mock-row"><span className="mock-row-label">Subtotal</span><span className="mock-row-value">Rs. 5,000</span></div>
@@ -175,44 +175,45 @@ export default function Home() {
             <div className="feature-icon" style={{ background: '#eff6ff' }}>
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#2563eb" strokeWidth="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
             </div>
-            <div className="feature-title">Auto GST Calculation</div>
-            <div className="feature-desc">Automatic CGST, SGST, and IGST calculation based on transaction type. Supports all GST slabs — 0%, 5%, 12%, 18%, 28%.</div>
+            <div className="feature-title">GST Invoices</div>
+            <div className="feature-desc">Professional invoices with automatic CGST, SGST & IGST calculation. Supports all slabs — 0%, 5%, 12%, 18%, 28%. PDF in one click.</div>
+          </div>
+          <div className="feature-card">
+            <div className="feature-icon" style={{ background: '#f5f3ff' }}>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#7c3aed" strokeWidth="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="9" y1="13" x2="15" y2="13"/><line x1="9" y1="17" x2="11" y2="17"/></svg>
+            </div>
+            <div className="feature-title">Quotes & Estimates</div>
+            <div className="feature-desc">Send professional estimates before billing. Track quote status — Draft, Sent, Accepted. Convert to invoice in one click.</div>
+          </div>
+          <div className="feature-card">
+            <div className="feature-icon" style={{ background: '#fff1f2' }}>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#e11d48" strokeWidth="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+            </div>
+            <div className="feature-title">Expense Tracker</div>
+            <div className="feature-desc">Log business expenses by category — Software, Travel, Office and more. See your net profit after expenses on the dashboard.</div>
           </div>
           <div className="feature-card">
             <div className="feature-icon" style={{ background: '#f0fdf4' }}>
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#16a34a" strokeWidth="2"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
             </div>
             <div className="feature-title">UPI QR Code</div>
-            <div className="feature-desc">Scannable UPI QR code embedded directly in your invoice. Clients can pay instantly with any UPI app — PhonePe, GPay, Paytm.</div>
+            <div className="feature-desc">Scannable UPI QR code embedded in every invoice. Clients pay instantly with PhonePe, GPay, or Paytm.</div>
           </div>
           <div className="feature-card">
             <div className="feature-icon" style={{ background: '#fff7ed' }}>
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#ea580c" strokeWidth="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#ea580c" strokeWidth="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
             </div>
-            <div className="feature-title">Instant PDF Download</div>
-            <div className="feature-desc">Download a professional PDF invoice in one click. Share via email or WhatsApp directly from the app.</div>
+            <div className="feature-title">Email & WhatsApp</div>
+            <div className="feature-desc">Send invoices and quotes directly to clients via email with PDF attached, or share instantly on WhatsApp.</div>
           </div>
           <div className="feature-card">
-            <div className="feature-icon" style={{ background: '#f5f3ff' }}>
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#7c3aed" strokeWidth="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+            <div className="feature-icon" style={{ background: '#f0f9ff' }}>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0284c7" strokeWidth="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
             </div>
-            <div className="feature-title">Business Profile</div>
-            <div className="feature-desc">Save your business details once — GSTIN, address, bank account, UPI ID. Auto-fills every invoice you create.</div>
+            <div className="feature-title">Business Dashboard</div>
+            <div className="feature-desc">Total revenue, expenses, net profit, paid vs unpaid invoices — everything you need to run your business at a glance.</div>
           </div>
-          <div className="feature-card">
-            <div className="feature-icon" style={{ background: '#fff1f2' }}>
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#e11d48" strokeWidth="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
-            </div>
-            <div className="feature-title">Email to Client</div>
-            <div className="feature-desc">Send the invoice PDF directly to your client's inbox with one click. Professional email template included.</div>
-          </div>
-          <div className="feature-card">
-            <div className="feature-icon" style={{ background: '#f0fdf4' }}>
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#16a34a" strokeWidth="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
-            </div>
-            <div className="feature-title">Invoice Dashboard</div>
-            <div className="feature-desc">Track all your invoices, total revenue, and monthly billing in a clean dashboard. Never lose an invoice again.</div>
-          </div>
+        </div>
         </div>
       </section>
 
@@ -242,9 +243,9 @@ export default function Home() {
 
       <section className="cta-section">
         <div className="cta-box">
-          <h2 className="cta-title">Start creating GST invoices for free</h2>
-          <p className="cta-sub">Join thousands of Indian freelancers and businesses who invoice professionally with GSTFlow.</p>
-          <a href="/signup" className="btn-cta">Create Your First Invoice →</a>
+          <h2 className="cta-title">Run your business smarter, for free</h2>
+          <p className="cta-sub">Invoices, quotes, expense tracking and client management — everything your business needs, free forever.</p>
+          <a href="/signup" className="btn-cta">Get Started Free →</a>
           <div className="cta-note">No credit card required · Free forever</div>
         </div>
       </section>
