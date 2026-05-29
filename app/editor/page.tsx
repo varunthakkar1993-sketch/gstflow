@@ -38,24 +38,19 @@ export default function InvoiceEditor() {
       const countSnap = await getCountFromServer(q);
       const count = countSnap.data().count + 1;
       const invoiceNumber = `INV-${String(count).padStart(3, '0')}`;
-      // Check if new=1 to reset form, otherwise just set invoice number
-      const urlParams = new URLSearchParams(window.location.search);
-      if (urlParams.has('new') || !urlParams.get('from_quote')) {
-        setInvoiceData({
-          invoiceNumber,
-          date: new Date().toISOString().split('T')[0],
-          clientName: '',
-          clientEmail: '',
-          clientAddress: '',
-          clientGSTIN: '',
-          description: '',
-          amount: '',
-          isIntraState: 'true',
-          gstRate: '18',
-        });
-      } else {
-        setInvoiceData(prev => ({ ...prev, invoiceNumber }));
-      }
+      // Always reset form — from_quote useEffect handles pre-fill separately
+      setInvoiceData({
+        invoiceNumber,
+        date: new Date().toISOString().split('T')[0],
+        clientName: '',
+        clientEmail: '',
+        clientAddress: '',
+        clientGSTIN: '',
+        description: '',
+        amount: '',
+        isIntraState: 'true',
+        gstRate: '18',
+      });
     });
   }, []);
 
