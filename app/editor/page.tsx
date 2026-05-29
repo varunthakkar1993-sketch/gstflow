@@ -48,8 +48,8 @@ export default function InvoiceEditor() {
           clientEmail: '',
           clientAddress: '',
           clientGSTIN: '',
-          description: 'Web Development Services',
-          amount: '5000',
+          description: '',
+          amount: '',
           isIntraState: 'true',
           gstRate: '18',
         });
