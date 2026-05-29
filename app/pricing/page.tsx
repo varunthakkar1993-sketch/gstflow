@@ -78,7 +78,7 @@ export default function PricingPage() {
       <div className="pricing-hero">
         <div className="section-label">Pricing</div>
         <h1 className="pricing-title">Simple, honest pricing</h1>
-        <p className="pricing-sub">Start free, upgrade when you're ready. No hidden charges, no surprises.</p>
+        <p className="pricing-sub">Start free, upgrade when you are ready. No hidden charges, no surprises.</p>
         <div className="billing-toggle">
           <button className={`toggle-btn ${billing === 'monthly' ? 'active' : ''}`} onClick={() => setBilling('monthly')}>Monthly</button>
           <button className={`toggle-btn ${billing === 'yearly' ? 'active' : ''}`} onClick={() => setBilling('yearly')}>
@@ -150,7 +150,7 @@ export default function PricingPage() {
         <div className="faq-title">Frequently asked questions</div>
         <div className="faq-item">
           <div className="faq-q">Is Paavti really free?</div>
-          <div className="faq-a">Yes. The free plan is free forever — no credit card needed. You get 5 invoices and 5 quotes per month, which is enough to get started.</div>
+          <div className="faq-a">Yes. The free plan is free forever, no credit card needed. You get 5 invoices and 5 quotes per month, which is enough to get started.</div>
         </div>
         <div className="faq-item">
           <div className="faq-q">Can I upgrade or cancel anytime?</div>
