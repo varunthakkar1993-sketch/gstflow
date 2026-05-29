@@ -245,7 +245,7 @@ export default function Home() {
           <h2 className="cta-title">Run your business smarter, for free</h2>
           <p className="cta-sub">Invoices, quotes, expense tracking and client management — everything your business needs, free forever.</p>
           <a href="/signup" className="btn-cta">Get Started Free →</a>
-          <div className="cta-note">No credit card required · Free forever</div>
+          <div className="cta-note">No credit card required · Free to get started</div>
         </div>
       </section>
 
