@@ -176,21 +176,21 @@ export default function Home() {
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#2563eb" strokeWidth="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
             </div>
             <div className="feature-title">GST Invoices</div>
-            <div className="feature-desc">Professional invoices with automatic CGST, SGST & IGST calculation. Supports all slabs — 0%, 5%, 12%, 18%, 28%. PDF in one click.</div>
+            <div className="feature-desc">Professional invoices with automatic CGST, SGST & IGST calculation. Supports all slabs: 0%, 5%, 12%, 18%, 28%. PDF in one click.</div>
           </div>
           <div className="feature-card">
             <div className="feature-icon" style={{ background: '#f5f3ff' }}>
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#7c3aed" strokeWidth="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="9" y1="13" x2="15" y2="13"/><line x1="9" y1="17" x2="11" y2="17"/></svg>
             </div>
             <div className="feature-title">Quotes & Estimates</div>
-            <div className="feature-desc">Send professional estimates before billing. Track quote status — Draft, Sent, Accepted. Convert to invoice in one click.</div>
+            <div className="feature-desc">Send professional estimates before billing. Track quote status: Draft, Sent, Accepted. Convert to invoice in one click.</div>
           </div>
           <div className="feature-card">
             <div className="feature-icon" style={{ background: '#fff1f2' }}>
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#e11d48" strokeWidth="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
             </div>
             <div className="feature-title">Expense Tracker</div>
-            <div className="feature-desc">Log business expenses by category — Software, Travel, Office and more. See your net profit after expenses on the dashboard.</div>
+            <div className="feature-desc">Log business expenses by category: Software, Travel, Office and more. See your net profit after expenses on the dashboard.</div>
           </div>
           <div className="feature-card">
             <div className="feature-icon" style={{ background: '#f0fdf4' }}>
@@ -211,7 +211,7 @@ export default function Home() {
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0284c7" strokeWidth="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
             </div>
             <div className="feature-title">Business Dashboard</div>
-            <div className="feature-desc">Total revenue, expenses, net profit, paid vs unpaid invoices — everything you need to run your business at a glance.</div>
+            <div className="feature-desc">Total revenue, expenses, net profit, paid vs unpaid invoices. Everything you need to run your business at a glance.</div>
           </div>
         </div>
       </section>
@@ -234,7 +234,7 @@ export default function Home() {
             <div className="step">
               <div className="step-num">3</div>
               <div className="step-title">Track & grow</div>
-              <div className="step-desc">Log expenses, track net profit, manage clients — everything in one clean dashboard built for India.</div>
+              <div className="step-desc">Log expenses, track net profit, manage clients. One clean dashboard built for India. in one clean dashboard built for India.</div>
             </div>
           </div>
         </div>
