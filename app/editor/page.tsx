@@ -37,7 +37,14 @@ export default function InvoiceEditor() {
       const q = query(collection(db, 'invoices'), where('userId', '==', currentUser.uid));
       const countSnap = await getCountFromServer(q);
       const count = countSnap.data().count + 1;
-      setInvoiceData(prev => ({ ...prev, invoiceNumber: `INV-${String(count).padStart(3, '0')}` }));
+      const invoiceNumber = `INV-${String(count).padStart(3, '0')}`;
+      // Pre-fill from quote if converting
+      const urlParams = new URLSearchParams(window.location.search);
+      const clientName = urlParams.get('clientName') || '';
+      const clientEmail = urlParams.get('clientEmail') || '';
+      const clientAddress = urlParams.get('clientAddress') || '';
+      const amount = urlParams.get('amount') || '5000';
+      setInvoiceData(prev => ({ ...prev, invoiceNumber, clientName, clientEmail, clientAddress, amount }));
     });
   }, []);
 
