@@ -40,11 +40,18 @@ export default function InvoiceEditor() {
       const invoiceNumber = `INV-${String(count).padStart(3, '0')}`;
       // Pre-fill from quote if converting
       const urlParams = new URLSearchParams(window.location.search);
-      const clientName = urlParams.get('clientName') || '';
-      const clientEmail = urlParams.get('clientEmail') || '';
-      const clientAddress = urlParams.get('clientAddress') || '';
+      const clientName = decodeURIComponent(urlParams.get('clientName') || '');
+      const clientEmail = decodeURIComponent(urlParams.get('clientEmail') || '');
+      const clientAddress = decodeURIComponent(urlParams.get('clientAddress') || '');
       const amount = urlParams.get('amount') || '5000';
-      setInvoiceData(prev => ({ ...prev, invoiceNumber, clientName, clientEmail, clientAddress, amount }));
+      setInvoiceData(prev => ({
+        ...prev,
+        invoiceNumber,
+        ...(clientName && { clientName }),
+        ...(clientEmail && { clientEmail }),
+        ...(clientAddress && { clientAddress }),
+        ...(urlParams.get('amount') && { amount }),
+      }));
     });
   }, []);
 
