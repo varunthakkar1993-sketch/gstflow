@@ -40,7 +40,7 @@ export default function InvoiceEditor() {
       const invoiceNumber = `INV-${String(count).padStart(3, '0')}`;
       // Check if new=1 to reset form, otherwise just set invoice number
       const urlParams = new URLSearchParams(window.location.search);
-      if (urlParams.get('new') === '1') {
+      if (urlParams.has('new') || !urlParams.get('from_quote')) {
         setInvoiceData({
           invoiceNumber,
           date: new Date().toISOString().split('T')[0],
