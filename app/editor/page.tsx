@@ -2,12 +2,14 @@
 
 import { useEffect, useState } from 'react';
 import { onAuthStateChanged } from 'firebase/auth';
+import { useSearchParams } from 'next/navigation';
 import { auth, db } from '../../lib/firebase';
 import { collection, addDoc, serverTimestamp, doc, getDoc, query, where, getCountFromServer } from 'firebase/firestore';
 import jsPDF from 'jspdf';
 import QRCode from 'qrcode';
 
 export default function InvoiceEditor() {
+  const searchParams = useSearchParams();
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(false);
   const [profile, setProfile] = useState<any>(null);
@@ -39,18 +41,17 @@ export default function InvoiceEditor() {
       const count = countSnap.data().count + 1;
       const invoiceNumber = `INV-${String(count).padStart(3, '0')}`;
       // Pre-fill from quote if converting
-      const urlParams = new URLSearchParams(window.location.search);
-      const clientName = decodeURIComponent(urlParams.get('clientName') || '');
-      const clientEmail = decodeURIComponent(urlParams.get('clientEmail') || '');
-      const clientAddress = decodeURIComponent(urlParams.get('clientAddress') || '');
-      const amount = urlParams.get('amount') || '5000';
+      const clientName = searchParams.get('clientName') || '';
+      const clientEmail = searchParams.get('clientEmail') || '';
+      const clientAddress = searchParams.get('clientAddress') || '';
+      const amount = searchParams.get('amount') || '5000';
       setInvoiceData(prev => ({
         ...prev,
         invoiceNumber,
         ...(clientName && { clientName }),
         ...(clientEmail && { clientEmail }),
         ...(clientAddress && { clientAddress }),
-        ...(urlParams.get('amount') && { amount }),
+        ...(searchParams.get('amount') && { amount }),
       }));
     });
   }, []);
