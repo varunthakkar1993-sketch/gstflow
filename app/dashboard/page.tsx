@@ -9,7 +9,6 @@ export default function Dashboard() {
   const [user, setUser] = useState<any>(null);
   const [invoices, setInvoices] = useState<any[]>([]);
   const [totalExpenses, setTotalExpenses] = useState(0);
-  const [totalExpenses, setTotalExpenses] = useState(0);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
