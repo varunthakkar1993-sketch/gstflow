@@ -40,21 +40,26 @@ export default function InvoiceEditor() {
       const countSnap = await getCountFromServer(q);
       const count = countSnap.data().count + 1;
       const invoiceNumber = `INV-${String(count).padStart(3, '0')}`;
-      // Pre-fill from quote if converting
-      const clientName = searchParams.get('clientName') || '';
-      const clientEmail = searchParams.get('clientEmail') || '';
-      const clientAddress = searchParams.get('clientAddress') || '';
-      const amount = searchParams.get('amount') || '5000';
+      setInvoiceData(prev => ({ ...prev, invoiceNumber }));
+    });
+  }, []);
+
+  // Separate effect to pre-fill from quote URL params
+  useEffect(() => {
+    const clientName = searchParams.get('clientName') || '';
+    const clientEmail = searchParams.get('clientEmail') || '';
+    const clientAddress = searchParams.get('clientAddress') || '';
+    const amount = searchParams.get('amount') || '';
+    if (clientName || clientEmail || clientAddress || amount) {
       setInvoiceData(prev => ({
         ...prev,
-        invoiceNumber,
         ...(clientName && { clientName }),
         ...(clientEmail && { clientEmail }),
         ...(clientAddress && { clientAddress }),
-        ...(searchParams.get('amount') && { amount }),
+        ...(amount && { amount }),
       }));
-    });
-  }, []);
+    }
+  }, [searchParams]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     setInvoiceData({ ...invoiceData, [e.target.name]: e.target.value });
