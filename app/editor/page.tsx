@@ -46,6 +46,21 @@ export default function InvoiceEditor() {
   useEffect(() => {
     if (typeof window === 'undefined') return;
     const params = new URLSearchParams(window.location.search);
+    // If new=1, reset form to blank
+    if (params.get('new') === '1') {
+      setInvoiceData(prev => ({
+        ...prev,
+        clientName: '',
+        clientEmail: '',
+        clientAddress: '',
+        clientGSTIN: '',
+        description: 'Web Development Services',
+        amount: '5000',
+        isIntraState: 'true',
+        gstRate: '18',
+      }));
+      return;
+    }
     const fromQuote = params.get('from_quote');
     const clientName = params.get('clientName') || '';
     const clientEmail = params.get('clientEmail') || '';
@@ -536,11 +551,11 @@ export default function InvoiceEditor() {
                     <>
                       <div className="summary-inv-row">
                         <span>CGST ({parseFloat(invoiceData.gstRate) / 2}%)</span>
-                        <span>Rs. {taxAmount.toFixed(2)}</span>
+                        <span>Rs. {(taxAmount / 2).toFixed(2)}</span>
                       </div>
                       <div className="summary-inv-row">
                         <span>SGST ({parseFloat(invoiceData.gstRate) / 2}%)</span>
-                        <span>Rs. {taxAmount.toFixed(2)}</span>
+                        <span>Rs. {(taxAmount / 2).toFixed(2)}</span>
                       </div>
                     </>
                   ) : (
