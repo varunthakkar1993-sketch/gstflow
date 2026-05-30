@@ -6,6 +6,7 @@ import { auth, db } from '../../lib/firebase';
 import { collection, addDoc, serverTimestamp, doc, getDoc, query, where, getCountFromServer } from 'firebase/firestore';
 import jsPDF from 'jspdf';
 import QRCode from 'qrcode';
+import posthog from 'posthog-js';
 
 export default function InvoiceEditor() {
   const [user, setUser] = useState<any>(null);
@@ -263,9 +264,19 @@ export default function InvoiceEditor() {
         total: total,
         createdAt: serverTimestamp(),
       });
+      posthog.capture('invoice_generated', {
+        invoice_number: invoiceData.invoiceNumber,
+        total,
+        subtotal,
+        gst_rate: invoiceData.gstRate,
+        is_intra_state: isIntra,
+        has_client_email: !!invoiceData.clientEmail,
+        has_gstin: !!invoiceData.clientGSTIN,
+      });
       setInvoiceSaved(true);
     } catch (error) {
       console.error(error);
+      posthog.captureException(error);
       alert('Failed to generate invoice.');
     } finally {
       setLoading(false);
@@ -289,14 +300,19 @@ export default function InvoiceEditor() {
           pdfBase64,
         }),
       });
-      if (res.ok) alert('✅ Invoice emailed successfully!');
-      else alert('Failed to send email.');
+      if (res.ok) {
+        posthog.capture('invoice_emailed', { invoice_number: invoiceData.invoiceNumber, total });
+        alert('✅ Invoice emailed successfully!');
+      } else {
+        alert('Failed to send email.');
+      }
     } catch { alert('Failed to send email.'); }
     finally { setSending(false); }
   };
 
   const sendWhatsApp = () => {
     const msg = encodeURIComponent(`Hi ${invoiceData.clientName}, please find your invoice ${invoiceData.invoiceNumber} for Rs. ${total.toLocaleString('en-IN')} from ${profile?.businessName || 'Paavti'} dated ${invoiceData.date}. Thank you for your business!`);
+    posthog.capture('invoice_whatsapped', { invoice_number: invoiceData.invoiceNumber, total });
     window.open(`https://wa.me/?text=${msg}`, '_blank');
   };
 

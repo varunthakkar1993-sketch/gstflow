@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import sgMail from '@sendgrid/mail';
+import { getPostHogClient } from '@/lib/posthog-server';
 
 sgMail.setApiKey(process.env.SENDGRID_API_KEY!);
 
@@ -30,6 +31,13 @@ export async function POST(req: NextRequest) {
           disposition: 'attachment',
         },
       ],
+    });
+
+    const posthog = getPostHogClient();
+    posthog.capture({
+      distinctId: to,
+      event: 'invoice_send_completed',
+      properties: { invoice_number: invoiceNumber, client_name: clientName, total, business_name: businessName },
     });
 
     return NextResponse.json({ success: true });

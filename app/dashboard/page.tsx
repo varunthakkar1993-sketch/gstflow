@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { onAuthStateChanged, signOut } from 'firebase/auth';
 import { auth, db } from '../../lib/firebase';
 import { collection, query, where, getDocs, orderBy, doc, updateDoc, getDoc } from 'firebase/firestore';
+import posthog from 'posthog-js';
 
 export default function Dashboard() {
   const [user, setUser] = useState<any>(null);
@@ -56,6 +57,12 @@ export default function Dashboard() {
     const next = inv.status === 'paid' ? 'unpaid' : inv.status === 'unpaid' ? 'sent' : 'paid';
     await updateDoc(doc(db, 'invoices', inv.id), { status: next });
     setInvoices(prev => prev.map(i => i.id === inv.id ? { ...i, status: next } : i));
+    posthog.capture('invoice_status_changed', {
+      invoice_number: inv.invoiceNumber,
+      previous_status: inv.status || 'unpaid',
+      new_status: next,
+      invoice_total: inv.total,
+    });
   };
 
   const totalRevenue = invoices.reduce((sum, inv) => sum + (inv.total || 0), 0);

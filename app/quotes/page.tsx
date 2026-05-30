@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { onAuthStateChanged } from 'firebase/auth';
 import { auth, db } from '../../lib/firebase';
 import { collection, query, where, getDocs, orderBy, doc, updateDoc } from 'firebase/firestore';
+import posthog from 'posthog-js';
 
 export default function QuotesPage() {
   const [user, setUser] = useState<any>(null);
@@ -34,6 +35,12 @@ export default function QuotesPage() {
     const next = cycle[quote.status || 'draft'];
     await updateDoc(doc(db, 'quotes', quote.id), { status: next });
     setQuotes(prev => prev.map(q => q.id === quote.id ? { ...q, status: next } : q));
+    posthog.capture('quote_status_changed', {
+      quote_number: quote.quoteNumber,
+      previous_status: quote.status || 'draft',
+      new_status: next,
+      quote_total: quote.total,
+    });
   };
 
   const statusStyle = (status: string) => {

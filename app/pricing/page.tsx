@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { onAuthStateChanged } from 'firebase/auth';
 import { auth } from '../../lib/firebase';
 import { useEffect } from 'react';
+import posthog from 'posthog-js';
 
 declare global {
   interface Window {
@@ -31,6 +32,7 @@ export default function PricingPage() {
 
   const handlePayment = async (plan: string, billingType: string) => {
     if (!user) { window.location.href = '/signup'; return; }
+    posthog.capture('upgrade_clicked', { plan, billing_type: billingType });
     setLoading(true);
     try {
       const loaded = await loadRazorpay();

@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { signInWithEmailAndPassword } from 'firebase/auth';
 import { auth } from '../../../lib/firebase';
+import posthog from 'posthog-js';
 
 export default function Login() {
   const [email, setEmail] = useState('');
@@ -16,9 +17,12 @@ export default function Login() {
     setError('');
 
     try {
-      await signInWithEmailAndPassword(auth, email, password);
+      const credential = await signInWithEmailAndPassword(auth, email, password);
+      posthog.identify(credential.user.uid, { email });
+      posthog.capture('user_logged_in', { email });
       window.location.href = '/dashboard';
     } catch (err: any) {
+      posthog.captureException(err);
       setError('Invalid email or password');
     } finally {
       setLoading(false);

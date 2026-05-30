@@ -1,6 +1,7 @@
 import crypto from 'crypto';
 import { NextRequest, NextResponse } from 'next/server';
 import * as admin from 'firebase-admin';
+import { getPostHogClient } from '@/lib/posthog-server';
 
 if (!admin.apps.length) {
   admin.initializeApp({
@@ -39,6 +40,13 @@ export async function POST(req: NextRequest) {
       orderId: razorpay_order_id,
       activatedAt: new Date().toISOString(),
       status: 'active',
+    });
+
+    const posthog = getPostHogClient();
+    posthog.capture({
+      distinctId: userId,
+      event: 'payment_verified',
+      properties: { plan, billing, payment_id: razorpay_payment_id, order_id: razorpay_order_id },
     });
 
     return NextResponse.json({ success: true });

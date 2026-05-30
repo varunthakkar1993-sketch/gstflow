@@ -1,5 +1,6 @@
 import Razorpay from 'razorpay';
 import { NextRequest, NextResponse } from 'next/server';
+import { getPostHogClient } from '@/lib/posthog-server';
 
 const razorpay = new Razorpay({
   key_id: process.env.RAZORPAY_KEY_ID!,
@@ -28,6 +29,13 @@ export async function POST(req: NextRequest) {
       currency: 'INR',
       receipt: `receipt_${Date.now()}`,
       notes: { plan, billing },
+    });
+
+    const posthog = getPostHogClient();
+    posthog.capture({
+      distinctId: order.id,
+      event: 'payment_order_created',
+      properties: { plan, billing, amount_paise: amount, order_id: order.id },
     });
 
     return NextResponse.json({ orderId: order.id, amount, currency: 'INR', keyId: process.env.RAZORPAY_KEY_ID });

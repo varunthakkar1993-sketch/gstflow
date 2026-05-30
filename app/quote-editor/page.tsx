@@ -5,6 +5,7 @@ import { onAuthStateChanged } from 'firebase/auth';
 import { auth, db } from '../../lib/firebase';
 import { collection, addDoc, serverTimestamp, doc, getDoc, query, where, getCountFromServer, getDocs } from 'firebase/firestore';
 import jsPDF from 'jspdf';
+import posthog from 'posthog-js';
 
 export default function QuoteEditor() {
   const [user, setUser] = useState<any>(null);
@@ -138,7 +139,11 @@ const [profile, setProfile] = useState<any>(null);
   };
 
   const handleGenerate = async () => {
-    if (!isPro && thisMonthQuotes >= 5) { setShowLimitModal(true); return; }
+    if (!isPro && thisMonthQuotes >= 5) {
+      setShowLimitModal(true);
+      posthog.capture('upgrade_prompt_shown', { trigger: 'quote_limit', quotes_used: thisMonthQuotes });
+      return;
+    }
     setLoading(true);
     try {
       const doc2 = await buildPDF();
@@ -158,9 +163,16 @@ const [profile, setProfile] = useState<any>(null);
         status: 'draft',
         createdAt: serverTimestamp(),
       });
+      posthog.capture('quote_generated', {
+        quote_number: quoteData.quoteNumber,
+        total,
+        item_count: quoteData.items.filter(i => i.description).length,
+        has_client_email: !!quoteData.clientEmail,
+      });
       setSaved(true);
     } catch (err) {
       console.error(err);
+      posthog.captureException(err);
       alert('Failed to generate quote.');
     } finally {
       setLoading(false);
@@ -186,14 +198,19 @@ const [profile, setProfile] = useState<any>(null);
           pdfBase64: base64,
         }),
       });
-      if (res.ok) alert('✅ Quote emailed!');
-      else alert('Failed to send.');
+      if (res.ok) {
+        posthog.capture('quote_emailed', { quote_number: quoteData.quoteNumber, total });
+        alert('✅ Quote emailed!');
+      } else {
+        alert('Failed to send.');
+      }
     } catch { alert('Failed to send.'); }
     finally { setSending(false); }
   };
 
   const sendWhatsApp = () => {
     const msg = encodeURIComponent(`Hi ${quoteData.clientName}, please find your quote ${quoteData.quoteNumber} for Rs. ${total.toLocaleString('en-IN')} from ${profile?.businessName || 'Paavti'}. Valid until ${quoteData.validUntil}.`);
+    posthog.capture('quote_whatsapped', { quote_number: quoteData.quoteNumber, total });
     window.open(`https://wa.me/?text=${msg}`, '_blank');
   };
 

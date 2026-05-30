@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { createUserWithEmailAndPassword } from 'firebase/auth';
 import { auth } from '../../../lib/firebase';
+import posthog from 'posthog-js';
 
 export default function Signup() {
   const [email, setEmail] = useState('');
@@ -16,10 +17,13 @@ export default function Signup() {
     setError('');
 
     try {
-      await createUserWithEmailAndPassword(auth, email, password);
+      const credential = await createUserWithEmailAndPassword(auth, email, password);
+      posthog.identify(credential.user.uid, { email });
+      posthog.capture('user_signed_up', { email });
       window.location.href = '/dashboard';
     } catch (err: any) {
       console.error(err);
+      posthog.captureException(err);
       if (err.code === 'auth/weak-password') {
         setError('Password should be at least 6 characters long.');
       } else if (err.code === 'auth/email-already-in-use') {
