@@ -3,12 +3,15 @@
 import { useEffect, useState } from 'react';
 import { onAuthStateChanged } from 'firebase/auth';
 import { auth, db } from '../../lib/firebase';
-import { collection, addDoc, serverTimestamp, doc, getDoc, query, where, getCountFromServer } from 'firebase/firestore';
+import { collection, addDoc, serverTimestamp, doc, getDoc, query, where, getCountFromServer, getDocs } from 'firebase/firestore';
 import jsPDF from 'jspdf';
 
 export default function QuoteEditor() {
   const [user, setUser] = useState<any>(null);
-  const [profile, setProfile] = useState<any>(null);
+const [isPro, setIsPro] = useState(false);
+const [thisMonthQuotes, setThisMonthQuotes] = useState(0);
+const [showLimitModal, setShowLimitModal] = useState(false);
+const [profile, setProfile] = useState<any>(null);
   const [loading, setLoading] = useState(false);
   const [saved, setSaved] = useState(false);
   const [sending, setSending] = useState(false);
@@ -29,6 +32,16 @@ export default function QuoteEditor() {
     onAuthStateChanged(auth, async (currentUser) => {
       if (!currentUser) { window.location.href = '/login'; return; }
       setUser(currentUser);
+      try {
+        const subDoc = await getDoc(doc(db, 'subscriptions', currentUser.uid));
+        if (subDoc.exists() && subDoc.data()?.status === 'active') setIsPro(true);
+      } catch (e) {}
+      try {
+        const now = new Date();
+        const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
+        const mqSnap = await getDocs(query(collection(db, 'quotes'), where('userId', '==', currentUser.uid), where('createdAt', '>=', new Date(startOfMonth))));
+        setThisMonthQuotes(mqSnap.size);
+      } catch (e) {}
       const profileSnap = await getDoc(doc(db, 'profiles', currentUser.uid));
       if (profileSnap.exists()) setProfile(profileSnap.data());
       const q = query(collection(db, 'quotes'), where('userId', '==', currentUser.uid));
@@ -125,6 +138,7 @@ export default function QuoteEditor() {
   };
 
   const handleGenerate = async () => {
+    if (!isPro && thisMonthQuotes >= 5) { setShowLimitModal(true); return; }
     setLoading(true);
     try {
       const doc2 = await buildPDF();
@@ -416,6 +430,17 @@ export default function QuoteEditor() {
           </div>
         </main>
       </div>
+   {showLimitModal && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 50, display: 'flex', alignItems: 'center', justifyContent: 'center' }} onClick={() => setShowLimitModal(false)}>
+          <div style={{ background: '#fff', borderRadius: 16, width: 440, padding: 36, textAlign: 'center' }} onClick={e => e.stopPropagation()}>
+            <div style={{ fontSize: 40, marginBottom: 16 }}>⚡</div>
+            <div style={{ fontFamily: 'Lora, serif', fontSize: 20, color: '#0f1f5c', fontWeight: 600, marginBottom: 10 }}>Monthly limit reached</div>
+            <div style={{ fontSize: 14, color: '#6b7280', lineHeight: 1.6, marginBottom: 28 }}>You have used all 5 free quotes this month. Upgrade to Pro for unlimited quotes, invoices and more.</div>
+            <a href="/pricing" style={{ display: 'block', width: '100%', background: '#2563eb', color: '#fff', padding: 12, borderRadius: 9, fontSize: 14, fontWeight: 600, textDecoration: 'none', marginBottom: 10 }}>Upgrade to Pro →</a>
+            <button style={{ display: 'block', width: '100%', background: '#f3f4f6', color: '#374151', padding: 12, borderRadius: 9, fontSize: 14, border: 'none', cursor: 'pointer' }} onClick={() => setShowLimitModal(false)}>Maybe later</button>
+          </div>
+        </div>
+      )}
     </>
   );
 }
