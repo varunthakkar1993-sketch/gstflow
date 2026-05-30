@@ -31,6 +31,9 @@ export const metadata: Metadata = {
   creator: "Paavti",
   publisher: "Paavti",
   metadataBase: new URL("https://paavti.com"),
+  verification: {
+    google: "qFwG6GJZPzzEcfip58UTruKrG-iXB4IrwAal3S3P4rY",
+  },
   alternates: {
     canonical: "/",
   },
