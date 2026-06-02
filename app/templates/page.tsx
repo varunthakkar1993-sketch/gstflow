@@ -130,8 +130,8 @@ export default function Templates() {
               <div className="card-icon" style={{ background: t.color }}>{t.icon}</div>
               <div className="card-name">{t.name}</div>
               <div className="card-desc">{t.desc}</div>
-              <div className={`card-tag ${t.target === 'quote' ? 'quote' : ''}`}>
-                {t.target === 'quote' ? '📝 Quote' : '🧾 Invoice'}
+              <div className={`card-tag ${t.target === 'quote' ? 'quote' : t.target === 'receipt' ? 'receipt' : ''}`}>
+                {t.target === 'quote' ? '📝 Quote' : t.target === 'receipt' ? '✅ Receipt' : '🧾 Invoice'}
               </div>
               <button className="use-btn" onClick={() => handleUse(t)}>Use This Template →</button>
             </div>
