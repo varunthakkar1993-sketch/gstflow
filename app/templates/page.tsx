@@ -39,7 +39,7 @@ const templates = [
     icon: "✅",
     color: "#dcfce7",
     params: { description: "Payment Received", gst: "0", notes: "Payment received in full. Thank you!" },
-    target: "invoice",
+    target: "receipt",
   },
   {
     id: 5,
@@ -76,6 +76,8 @@ export default function Templates() {
     if (template.target === 'quote') {
       const qs = new URLSearchParams({ description: p.description || '', notes: p.notes || '', new: Date.now().toString() });
       window.location.href = `/quote-editor?${qs.toString()}`;
+    } else if (template.target === 'receipt') {
+      window.location.href = '/receipt-editor';
     } else {
       const qs = new URLSearchParams({ description: p.description || '', gst: p.gst || '18', notes: p.notes || '', new: Date.now().toString() });
       window.location.href = `/editor?${qs.toString()}`;
