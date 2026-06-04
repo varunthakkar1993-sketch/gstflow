@@ -204,7 +204,7 @@ export default function PricingPage() {
             <li className="feature-item"><span className="check"><svg width="10" height="10" viewBox="0 0 12 12" fill="none"><path d="M2 6l3 3 5-5" stroke="#16a34a" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg></span>Business dashboard</li>
           </ul>
           <button className="plan-btn primary" disabled={loading} onClick={() => handlePayment('pro', billing)}>
-            {loading ? 'Processing...' : 'Start Pro Free'}
+            {loading ? 'Processing...' : 'Get Pro Plan'}
           </button>
           {billing === 'yearly' && <div className="yearly-note">You save Rs. 1,089 a year</div>}
         </div>
@@ -241,11 +241,11 @@ export default function PricingPage() {
         </div>
         <div className="faq-item">
           <div className="faq-q">What payment methods do you accept?</div>
-          <div className="faq-a">We accept UPI, credit/debit cards, and net banking — all major Indian payment methods.</div>
+          <div className="faq-a">We accept UPI, credit/debit cards, and net banking. All major Indian payment methods accepted.</div>
         </div>
         <div className="faq-item">
           <div className="faq-q">What is the Lifetime Deal?</div>
-          <div className="faq-a">Pay once and get Pro access forever. This is a limited early adopter offer — price will go up once we hit capacity. All future features included.</div>
+          <div className="faq-a">Pay once and get Pro access forever. This is a limited early adopter offer. Price will go up once we hit capacity. All future features included.</div>
         </div>
         <div className="faq-item">
           <div className="faq-q">Is my data safe?</div>
