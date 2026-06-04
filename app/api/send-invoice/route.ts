@@ -6,18 +6,22 @@ sgMail.setApiKey(process.env.SENDGRID_API_KEY!);
 
 export async function POST(req: NextRequest) {
   try {
-    const { to, subject, invoiceNumber, clientName, businessName, total, date, pdfBase64 } = await req.json();
+    const { to, subject, invoiceNumber, clientName, businessName, total, date, pdfBase64, docType } = await req.json();
+
+    const type = docType || 'invoice';
+    const label = type === 'receipt' ? 'Receipt' : 'Invoice';
+    const lowerLabel = type === 'receipt' ? 'receipt' : 'invoice';
 
     await sgMail.send({
       to,
-      from: 'noreply@paavti.in', // must match your verified sender
-      subject: subject || `Invoice ${invoiceNumber} from ${businessName}`,
+      from: { email: 'noreply@paavti.in', name: 'Paavti' },
+      subject: subject || `${label} ${invoiceNumber} from ${businessName}`,
       html: `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-          <h2 style="color: #111;">Invoice from ${businessName}</h2>
+          <h2 style="color: #111;">${label} from ${businessName}</h2>
           <p>Dear ${clientName},</p>
-          <p>Please find your invoice <strong>${invoiceNumber}</strong> for <strong>Rs. ${total}</strong> dated ${date}.</p>
-          <p>The invoice PDF is attached to this email.</p>
+          <p>Please find your ${lowerLabel} <strong>${invoiceNumber}</strong> for <strong>Rs. ${total}</strong> dated ${date}.</p>
+          <p>The ${lowerLabel} PDF is attached to this email.</p>
           <br/>
           <p>Thank you for your business!</p>
           <p style="color: #666; font-size: 12px;">Sent via Paavti.in</p>
@@ -26,7 +30,7 @@ export async function POST(req: NextRequest) {
       attachments: [
         {
           content: pdfBase64,
-          filename: `Invoice-${invoiceNumber}.pdf`,
+          filename: `${label}-${invoiceNumber}.pdf`,
           type: 'application/pdf',
           disposition: 'attachment',
         },
@@ -36,8 +40,8 @@ export async function POST(req: NextRequest) {
     const posthog = getPostHogClient();
     posthog.capture({
       distinctId: to,
-      event: 'invoice_send_completed',
-      properties: { invoice_number: invoiceNumber, client_name: clientName, total, business_name: businessName },
+      event: `${lowerLabel}_send_completed`,
+      properties: { [`${lowerLabel}_number`]: invoiceNumber, client_name: clientName, total, business_name: businessName },
     });
 
     return NextResponse.json({ success: true });

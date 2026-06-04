@@ -3,29 +3,27 @@
 import { useEffect, useState } from 'react';
 import { onAuthStateChanged } from 'firebase/auth';
 import { auth, db } from '../../lib/firebase';
-import { collection, addDoc, serverTimestamp, doc, getDoc, query, where, getCountFromServer, getDocs } from 'firebase/firestore';
+import { collection, addDoc, serverTimestamp, doc, getDoc, query, where, getCountFromServer } from 'firebase/firestore';
 import jsPDF from 'jspdf';
 import posthog from 'posthog-js';
 
-export default function QuoteEditor() {
+export default function ReceiptEditor() {
   const [user, setUser] = useState<any>(null);
-const [isPro, setIsPro] = useState(false);
-const [thisMonthQuotes, setThisMonthQuotes] = useState(0);
-const [showLimitModal, setShowLimitModal] = useState(false);
-const [profile, setProfile] = useState<any>(null);
   const [loading, setLoading] = useState(false);
-  const [saved, setSaved] = useState(false);
+  const [profile, setProfile] = useState<any>(null);
+  const [receiptSaved, setReceiptSaved] = useState(false);
+  const [pdfBase64, setPdfBase64] = useState('');
   const [sending, setSending] = useState(false);
 
-  const [quoteData, setQuoteData] = useState({
-    quoteNumber: '',
+  const [receiptData, setReceiptData] = useState({
+    receiptNumber: '',
     date: new Date().toISOString().split('T')[0],
-    validUntil: new Date(Date.now() + 15 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
     clientName: '',
     clientEmail: '',
     clientAddress: '',
-    clientGSTIN: '',
-    items: [{ description: '', amount: '' }],
+    invoiceRef: '',
+    amount: '',
+    paymentMode: 'UPI',
     notes: '',
   });
 
@@ -33,184 +31,228 @@ const [profile, setProfile] = useState<any>(null);
     onAuthStateChanged(auth, async (currentUser) => {
       if (!currentUser) { window.location.href = '/login'; return; }
       setUser(currentUser);
-      try {
-        const subDoc = await getDoc(doc(db, 'subscriptions', currentUser.uid));
-        if (subDoc.exists() && subDoc.data()?.status === 'active') setIsPro(true);
-      } catch (e) {}
-      try {
-        const now = new Date();
-        const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
-        const mqSnap = await getDocs(query(collection(db, 'quotes'), where('userId', '==', currentUser.uid), where('createdAt', '>=', new Date(startOfMonth))));
-        setThisMonthQuotes(mqSnap.size);
-      } catch (e) {}
       const profileSnap = await getDoc(doc(db, 'profiles', currentUser.uid));
       if (profileSnap.exists()) setProfile(profileSnap.data());
-      const q = query(collection(db, 'quotes'), where('userId', '==', currentUser.uid));
+      const q = query(collection(db, 'receipts'), where('userId', '==', currentUser.uid));
       const countSnap = await getCountFromServer(q);
       const count = countSnap.data().count + 1;
-      setQuoteData(prev => ({ ...prev, quoteNumber: `QT-${String(count).padStart(3, '0')}` }));
+      const receiptNumber = `RCP-${String(count).padStart(3, '0')}`;
+      setReceiptData({
+        receiptNumber,
+        date: new Date().toISOString().split('T')[0],
+        clientName: '',
+        clientEmail: '',
+        clientAddress: '',
+        invoiceRef: '',
+        amount: '',
+        paymentMode: 'UPI',
+        notes: '',
+      });
     });
   }, []);
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    setQuoteData({ ...quoteData, [e.target.name]: e.target.value });
+  // Pre-fill from a paid invoice via ?from_invoice=<docId>
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const params = new URLSearchParams(window.location.search);
+    const fromInvoice = params.get('from_invoice');
+    if (fromInvoice) {
+      import('firebase/firestore').then(({ doc, getDoc }) => {
+        getDoc(doc(db, 'invoices', fromInvoice)).then(snap => {
+          if (snap.exists()) {
+            const inv = snap.data();
+            setReceiptData(prev => ({
+              ...prev,
+              clientName: inv.clientName || '',
+              clientEmail: inv.clientEmail || '',
+              clientAddress: inv.clientAddress || '',
+              invoiceRef: inv.invoiceNumber || '',
+              amount: String(inv.total || ''),
+            }));
+          }
+        });
+      });
+    }
+  }, []);
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
+    setReceiptData({ ...receiptData, [e.target.name]: e.target.value });
   };
 
-  const handleItemChange = (index: number, field: string, value: string) => {
-    const items = [...quoteData.items];
-    items[index] = { ...items[index], [field]: value };
-    setQuoteData({ ...quoteData, items });
-  };
-
-  const addItem = () => setQuoteData({ ...quoteData, items: [...quoteData.items, { description: '', amount: '' }] });
-  const removeItem = (i: number) => setQuoteData({ ...quoteData, items: quoteData.items.filter((_, idx) => idx !== i) });
-
-  const total = quoteData.items.reduce((sum, item) => sum + (parseFloat(item.amount) || 0), 0);
+  const amountReceived = parseFloat(receiptData.amount) || 0;
 
   const buildPDF = async () => {
     const doc2 = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
     const pageWidth = doc2.internal.pageSize.getWidth();
     const pageHeight = doc2.internal.pageSize.getHeight();
-    doc2.setFillColor(109, 40, 217);
+
+    // Dark header band
+    doc2.setFillColor(15, 31, 92);
     doc2.rect(0, 0, pageWidth, 42, 'F');
+
     if (profile?.logoBase64) {
       try {
         const ext = profile.logoBase64.startsWith('data:image/png') ? 'PNG' : 'JPEG';
         doc2.addImage(profile.logoBase64, ext, 12, 8, 0, 26);
       } catch (e) {}
     }
+
     doc2.setFontSize(22); doc2.setFont('helvetica', 'bold');
     doc2.setTextColor(255, 255, 255);
-    doc2.text('QUOTE', pageWidth - 14, 24, { align: 'right' });
+    doc2.text('RECEIPT', pageWidth - 14, 24, { align: 'right' });
     doc2.setFontSize(8); doc2.setFont('helvetica', 'normal');
-    doc2.setTextColor(210, 190, 255);
-    doc2.text(`${quoteData.quoteNumber}  ·  Valid until ${quoteData.validUntil}`, pageWidth - 14, 32, { align: 'right' });
+    doc2.setTextColor(180, 195, 230);
+    doc2.text(`${receiptData.receiptNumber}  ·  ${receiptData.date}`, pageWidth - 14, 32, { align: 'right' });
+
+    // Business info
     let y = 54;
     doc2.setFontSize(13); doc2.setFont('helvetica', 'bold');
-    doc2.setTextColor(109, 40, 217);
+    doc2.setTextColor(15, 31, 92);
     doc2.text(profile?.businessName || 'Your Business', 14, y); y += 6;
     doc2.setFontSize(8); doc2.setFont('helvetica', 'normal');
     doc2.setTextColor(100, 110, 130);
     if (profile?.address) { doc2.text(`${profile.address}, ${profile.city}, ${profile.state} - ${profile.pincode}`, 14, y); y += 5; }
     if (profile?.gstin) { doc2.text(`GSTIN: ${profile.gstin}`, 14, y); y += 5; }
     if (profile?.phone) { doc2.text(`Phone: ${profile.phone}`, 14, y); y += 5; }
+
     y += 3;
-    doc2.setDrawColor(109, 40, 217); doc2.setLineWidth(0.5);
-    doc2.line(14, y, pageWidth - 14, y); y += 8;
-    doc2.setFontSize(7.5); doc2.setFont('helvetica', 'bold'); doc2.setTextColor(100, 110, 130);
-    doc2.text('PREPARED FOR', 14, y); doc2.text('QUOTE DETAILS', pageWidth / 2, y); y += 5;
-    doc2.setFont('helvetica', 'bold'); doc2.setFontSize(9.5); doc2.setTextColor(15, 31, 92);
-    doc2.text(quoteData.clientName || 'Client', 14, y);
-    doc2.setFont('helvetica', 'normal'); doc2.setFontSize(8.5); doc2.setTextColor(60, 70, 90);
-    doc2.text(`Quote #: ${quoteData.quoteNumber}`, pageWidth / 2, y); y += 5;
-    doc2.setTextColor(100, 110, 130); doc2.setFontSize(8);
-    if (quoteData.clientEmail) { doc2.text(quoteData.clientEmail, 14, y); }
-    doc2.text(`Valid Until: ${quoteData.validUntil}`, pageWidth / 2, y); y += 5;
-    if (quoteData.clientAddress) { doc2.text(quoteData.clientAddress, 14, y); y += 5; }
+    doc2.setDrawColor(37, 99, 235);
+    doc2.setLineWidth(0.5);
+    doc2.line(14, y, pageWidth - 14, y);
+    y += 8;
+
+    // Received From / Receipt Details two columns
+    doc2.setFontSize(7.5); doc2.setFont('helvetica', 'bold');
+    doc2.setTextColor(100, 110, 130);
+    doc2.text('RECEIVED FROM', 14, y);
+    doc2.text('RECEIPT DETAILS', pageWidth / 2, y);
     y += 5;
-    doc2.setFillColor(245, 240, 255);
-    doc2.rect(14, y - 4, pageWidth - 28, 10, 'F');
-    doc2.setFontSize(8); doc2.setFont('helvetica', 'bold'); doc2.setTextColor(109, 40, 217);
-    doc2.text('DESCRIPTION', 18, y + 2); doc2.text('AMOUNT (Rs.)', pageWidth - 18, y + 2, { align: 'right' }); y += 12;
-    quoteData.items.forEach(item => {
-      if (!item.description && !item.amount) return;
-      doc2.setFont('helvetica', 'normal'); doc2.setFontSize(9); doc2.setTextColor(30, 40, 60);
-      doc2.text(item.description || '—', 18, y);
-      doc2.text((parseFloat(item.amount) || 0).toLocaleString('en-IN'), pageWidth - 18, y, { align: 'right' }); y += 8;
-    });
-    y += 2;
-    doc2.setFillColor(109, 40, 217); doc2.rect(14, y, pageWidth - 28, 12, 'F');
-    doc2.setFontSize(11); doc2.setFont('helvetica', 'bold'); doc2.setTextColor(255, 255, 255);
-    doc2.text('TOTAL ESTIMATE', 18, y + 8);
-    doc2.text(`Rs. ${total.toLocaleString('en-IN')}`, pageWidth - 18, y + 8, { align: 'right' }); y += 20;
-    if (quoteData.notes) {
-      doc2.setFontSize(7.5); doc2.setFont('helvetica', 'bold'); doc2.setTextColor(100, 110, 130);
-      doc2.text('NOTES', 14, y); y += 5;
-      doc2.setFont('helvetica', 'normal'); doc2.setFontSize(8.5); doc2.setTextColor(60, 70, 90);
-      const lines = doc2.splitTextToSize(quoteData.notes, pageWidth - 28);
-      doc2.text(lines, 14, y);
+
+    doc2.setFont('helvetica', 'bold'); doc2.setFontSize(9.5);
+    doc2.setTextColor(15, 31, 92);
+    doc2.text(receiptData.clientName || 'Client', 14, y);
+    doc2.setFont('helvetica', 'normal'); doc2.setFontSize(8.5);
+    doc2.setTextColor(60, 70, 90);
+    doc2.text(`Receipt #: ${receiptData.receiptNumber}`, pageWidth / 2, y); y += 5;
+    doc2.setTextColor(100, 110, 130); doc2.setFontSize(8);
+    if (receiptData.clientEmail) { doc2.text(receiptData.clientEmail, 14, y); }
+    doc2.setTextColor(60, 70, 90);
+    doc2.text(`Date: ${receiptData.date}`, pageWidth / 2, y); y += 5;
+    doc2.setTextColor(100, 110, 130);
+    if (receiptData.clientAddress) { doc2.text(receiptData.clientAddress, 14, y); }
+    if (receiptData.invoiceRef) {
+      doc2.setTextColor(60, 70, 90);
+      doc2.text(`Against Invoice: ${receiptData.invoiceRef}`, pageWidth / 2, y);
     }
-    doc2.setFillColor(245, 240, 255);
+    y += 5;
+    if (receiptData.clientAddress || receiptData.invoiceRef) y += 3;
+
+    // Payment confirmation band
+    y += 6;
+    doc2.setFillColor(240, 244, 255);
+    doc2.rect(14, y - 4, pageWidth - 28, 22, 'F');
+    doc2.setFontSize(8); doc2.setFont('helvetica', 'normal');
+    doc2.setTextColor(100, 110, 130);
+    doc2.text('Received with thanks the sum of', 18, y + 4);
+    doc2.setFontSize(15); doc2.setFont('helvetica', 'bold');
+    doc2.setTextColor(15, 31, 92);
+    doc2.text(`Rs. ${amountReceived.toLocaleString('en-IN')}`, 18, y + 13);
+    doc2.setFontSize(8); doc2.setFont('helvetica', 'normal');
+    doc2.setTextColor(100, 110, 130);
+    doc2.text('Payment Mode', pageWidth - 18, y + 4, { align: 'right' });
+    doc2.setFontSize(10); doc2.setFont('helvetica', 'bold');
+    doc2.setTextColor(15, 31, 92);
+    doc2.text(receiptData.paymentMode, pageWidth - 18, y + 13, { align: 'right' });
+    y += 30;
+
+    // Notes
+    if (receiptData.notes) {
+      doc2.setFontSize(7.5); doc2.setFont('helvetica', 'bold');
+      doc2.setTextColor(100, 110, 130);
+      doc2.text('NOTES', 14, y); y += 5;
+      doc2.setFont('helvetica', 'normal'); doc2.setFontSize(8.5);
+      doc2.setTextColor(30, 40, 60);
+      doc2.text(receiptData.notes, 14, y); y += 10;
+    }
+
+    // Footer band
+    doc2.setFillColor(240, 244, 255);
     doc2.rect(0, pageHeight - 14, pageWidth, 14, 'F');
-    doc2.setFontSize(8); doc2.setFont('helvetica', 'normal'); doc2.setTextColor(100, 110, 130);
-    doc2.text('This is an estimate. Prices are subject to change.', 14, pageHeight - 6);
+    doc2.setFontSize(8); doc2.setFont('helvetica', 'normal');
+    doc2.setTextColor(100, 110, 130);
+    doc2.text('This is a computer-generated receipt.', 14, pageHeight - 6);
     doc2.text('Made with Paavti.in', pageWidth - 14, pageHeight - 6, { align: 'right' });
+
     return doc2;
   };
 
-  const handleGenerate = async () => {
-    if (!isPro && thisMonthQuotes >= 5) {
-      setShowLimitModal(true);
-      posthog.capture('upgrade_prompt_shown', { trigger: 'quote_limit', quotes_used: thisMonthQuotes });
-      return;
-    }
+  const generateAndSavePDF = async () => {
     setLoading(true);
     try {
       const doc2 = await buildPDF();
-      doc2.save(`Paavti-${quoteData.quoteNumber}.pdf`);
-      await addDoc(collection(db, 'quotes'), {
+      doc2.save(`Paavti-${receiptData.receiptNumber}.pdf`);
+      const base64 = doc2.output('datauristring').split(',')[1];
+      setPdfBase64(base64);
+      await addDoc(collection(db, 'receipts'), {
         userId: user.uid,
-        quoteNumber: quoteData.quoteNumber,
-        date: quoteData.date,
-        validUntil: quoteData.validUntil,
-        clientName: quoteData.clientName,
-        clientEmail: quoteData.clientEmail,
-        clientAddress: quoteData.clientAddress,
-        clientGSTIN: quoteData.clientGSTIN,
-        items: quoteData.items,
-        notes: quoteData.notes,
-        total,
-        status: 'draft',
+        receiptNumber: receiptData.receiptNumber,
+        date: receiptData.date,
+        clientName: receiptData.clientName,
+        clientEmail: receiptData.clientEmail,
+        clientAddress: receiptData.clientAddress,
+        invoiceRef: receiptData.invoiceRef,
+        amount: amountReceived,
+        paymentMode: receiptData.paymentMode,
+        notes: receiptData.notes,
         createdAt: serverTimestamp(),
       });
-      posthog.capture('quote_generated', {
-        quote_number: quoteData.quoteNumber,
-        total,
-        item_count: quoteData.items.filter(i => i.description).length,
-        has_client_email: !!quoteData.clientEmail,
+      posthog.capture('receipt_generated', {
+        receipt_number: receiptData.receiptNumber,
+        amount: amountReceived,
+        payment_mode: receiptData.paymentMode,
+        has_invoice_ref: !!receiptData.invoiceRef,
+        has_client_email: !!receiptData.clientEmail,
       });
-      setSaved(true);
-    } catch (err) {
-      console.error(err);
-      posthog.captureException(err);
-      alert('Failed to generate quote.');
+      setReceiptSaved(true);
+    } catch (error) {
+      console.error(error);
+      posthog.captureException(error);
+      alert('Failed to generate receipt.');
     } finally {
       setLoading(false);
     }
   };
 
   const sendEmail = async () => {
-    if (!quoteData.clientEmail) { alert('Please enter client email first.'); return; }
+    if (!receiptData.clientEmail) { alert('Please enter client email first.'); return; }
     setSending(true);
     try {
-      const doc2 = await buildPDF();
-      const base64 = doc2.output('datauristring').split(',')[1];
       const res = await fetch('/api/send-invoice', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          to: quoteData.clientEmail,
-          invoiceNumber: quoteData.quoteNumber,
-          clientName: quoteData.clientName,
+          to: receiptData.clientEmail,
+          invoiceNumber: receiptData.receiptNumber,
+          clientName: receiptData.clientName,
           businessName: profile?.businessName || 'Paavti',
-          total: total.toLocaleString('en-IN'),
-          date: quoteData.date,
-          pdfBase64: base64,
+          total: amountReceived.toLocaleString('en-IN'),
+          date: receiptData.date,
+          pdfBase64,
         }),
       });
       if (res.ok) {
-        posthog.capture('quote_emailed', { quote_number: quoteData.quoteNumber, total });
-        alert('✅ Quote emailed!');
+        posthog.capture('receipt_emailed', { receipt_number: receiptData.receiptNumber, amount: amountReceived });
+        alert('✅ Receipt emailed successfully!');
       } else {
-        alert('Failed to send.');
+        alert('Failed to send email.');
       }
-    } catch { alert('Failed to send.'); }
+    } catch { alert('Failed to send email.'); }
     finally { setSending(false); }
   };
 
   const sendWhatsApp = () => {
-    const msg = encodeURIComponent(`Hi ${quoteData.clientName}, please find your quote ${quoteData.quoteNumber} for Rs. ${total.toLocaleString('en-IN')} from ${profile?.businessName || 'Paavti'}. Valid until ${quoteData.validUntil}.`);
-    posthog.capture('quote_whatsapped', { quote_number: quoteData.quoteNumber, total });
+    const msg = encodeURIComponent(`Hi ${receiptData.clientName}, please find your payment receipt ${receiptData.receiptNumber} for Rs. ${amountReceived.toLocaleString('en-IN')} from ${profile?.businessName || 'Paavti'} dated ${receiptData.date}. Thank you!`);
+    posthog.capture('receipt_whatsapped', { receipt_number: receiptData.receiptNumber, amount: amountReceived });
     window.open(`https://wa.me/?text=${msg}`, '_blank');
   };
 
@@ -220,7 +262,7 @@ const [profile, setProfile] = useState<any>(null);
         @import url('https://fonts.googleapis.com/css2?family=Lora:wght@400;500;600&family=DM+Sans:wght@300;400;500;600&display=swap');
         * { box-sizing: border-box; margin: 0; padding: 0; }
         body { background: #f0f4ff; }
-        .root { display: flex; min-height: 100vh; font-family: 'DM Sans', sans-serif; }
+        .editor-root { display: flex; min-height: 100vh; font-family: 'DM Sans', sans-serif; }
         .sidebar { width: 240px; background: #0f1f5c; min-height: 100vh; display: flex; flex-direction: column; position: fixed; left: 0; top: 0; bottom: 0; z-index: 10; }
         .sidebar-logo { padding: 28px 24px 24px; border-bottom: 1px solid rgba(255,255,255,0.08); }
         .sidebar-logo h1 { font-family: 'Lora', serif; font-size: 22px; color: #fff; font-weight: 600; }
@@ -229,7 +271,7 @@ const [profile, setProfile] = useState<any>(null);
         .nav-label { font-size: 10px; color: rgba(255,255,255,0.3); letter-spacing: 1px; text-transform: uppercase; padding: 0 12px; margin-bottom: 8px; margin-top: 16px; }
         .nav-item { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 8px; color: rgba(255,255,255,0.6); font-size: 13.5px; text-decoration: none; transition: all 0.15s; }
         .nav-item:hover { background: rgba(255,255,255,0.08); color: #fff; }
-        .nav-item.active { background: rgba(167,139,250,0.2); color: #fff; font-weight: 500; }
+        .nav-item.active { background: rgba(99,130,255,0.2); color: #fff; font-weight: 500; }
         .sidebar-footer { padding: 16px 12px; border-top: 1px solid rgba(255,255,255,0.08); }
         .user-chip { display: flex; align-items: center; gap: 10px; padding: 8px 12px; }
         .user-avatar { width: 32px; height: 32px; background: linear-gradient(135deg, #6382ff, #3b5bdb); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #fff; font-size: 13px; font-weight: 600; flex-shrink: 0; }
@@ -238,7 +280,7 @@ const [profile, setProfile] = useState<any>(null);
         .page-header { margin-bottom: 28px; }
         .page-header h2 { font-family: 'Lora', serif; font-size: 26px; color: #0f1f5c; font-weight: 600; }
         .page-header p { color: #6b7280; font-size: 14px; margin-top: 4px; }
-        .editor-grid { display: grid; grid-template-columns: 1fr 340px; gap: 24px; align-items: start; }
+        .editor-grid { display: grid; grid-template-columns: 1fr 360px; gap: 24px; align-items: start; }
         .card { background: #fff; border-radius: 12px; border: 1px solid #e5e9f5; overflow: hidden; margin-bottom: 20px; }
         .card-header { padding: 16px 24px; border-bottom: 1px solid #f0f4ff; display: flex; align-items: center; gap: 10px; }
         .card-header h3 { font-size: 14px; font-weight: 600; color: #0f1f5c; }
@@ -248,38 +290,43 @@ const [profile, setProfile] = useState<any>(null);
         .form-row.single { grid-template-columns: 1fr; }
         .field { margin-bottom: 16px; }
         .field label { display: block; font-size: 12.5px; font-weight: 500; color: #374151; margin-bottom: 6px; }
-        .field input, .field textarea { width: 100%; padding: 10px 14px; border: 1.5px solid #e5e9f5; border-radius: 8px; font-size: 14px; font-family: 'DM Sans', sans-serif; color: #111827; background: #fff; transition: border-color 0.15s; outline: none; }
-        .field input:focus, .field textarea:focus { border-color: #7c3aed; box-shadow: 0 0 0 3px rgba(124,58,237,0.08); }
+        .field input, .field textarea, .field select { width: 100%; padding: 10px 14px; border: 1.5px solid #e5e9f5; border-radius: 8px; font-size: 14px; font-family: 'DM Sans', sans-serif; color: #111827; background: #fff; transition: border-color 0.15s; outline: none; }
+        .field input:focus, .field textarea:focus, .field select:focus { border-color: #2563eb; box-shadow: 0 0 0 3px rgba(37,99,235,0.08); }
         .field input.readonly { background: #f8faff; color: #6b7280; }
-        .item-row { display: grid; grid-template-columns: 1fr 140px 36px; gap: 10px; margin-bottom: 10px; align-items: center; }
-        .item-input { padding: 9px 12px; border: 1.5px solid #e5e9f5; border-radius: 8px; font-size: 13.5px; font-family: 'DM Sans', sans-serif; color: #111827; outline: none; width: 100%; }
-        .item-input:focus { border-color: #7c3aed; }
-        .remove-btn { width: 32px; height: 32px; background: #fee2e2; border: none; border-radius: 6px; color: #dc2626; cursor: pointer; display: flex; align-items: center; justify-content: center; }
-        .add-item-btn { display: inline-flex; align-items: center; gap: 6px; color: #7c3aed; font-size: 13px; font-weight: 500; background: none; border: 1.5px dashed #c4b5fd; padding: 8px 16px; border-radius: 8px; cursor: pointer; font-family: 'DM Sans', sans-serif; }
-        .add-item-btn:hover { background: #f5f3ff; }
+        .field textarea { resize: vertical; min-height: 80px; }
         .summary-card { background: #fff; border-radius: 12px; border: 1px solid #e5e9f5; position: sticky; top: 24px; }
         .summary-header { padding: 16px 24px; border-bottom: 1px solid #f0f4ff; }
         .summary-header h3 { font-family: 'Lora', serif; font-size: 16px; color: #0f1f5c; font-weight: 600; }
         .summary-body { padding: 20px 24px; }
-        .summary-row { display: flex; justify-content: space-between; font-size: 13px; color: #374151; margin-bottom: 8px; }
+        .summary-business { margin-bottom: 20px; padding-bottom: 20px; border-bottom: 1px solid #f0f4ff; }
+        .summary-business-name { font-size: 15px; font-weight: 600; color: #0f1f5c; }
+        .summary-business-detail { font-size: 12px; color: #9ca3af; margin-top: 3px; }
+        .summary-inv-row { display: flex; justify-content: space-between; font-size: 13px; color: #374151; margin-bottom: 10px; }
         .summary-divider { border: none; border-top: 1px solid #f0f4ff; margin: 12px 0; }
         .summary-total { display: flex; justify-content: space-between; align-items: center; padding: 14px 0 0; }
         .summary-total-label { font-size: 14px; font-weight: 600; color: #0f1f5c; }
-        .summary-total-value { font-family: 'Lora', serif; font-size: 22px; font-weight: 600; color: #7c3aed; }
-        .btn-primary { width: 100%; background: #7c3aed; color: #fff; border: none; padding: 13px; border-radius: 9px; font-size: 14px; font-weight: 600; font-family: 'DM Sans', sans-serif; cursor: pointer; margin-top: 20px; }
-        .btn-primary:hover { background: #6d28d9; }
-        .btn-primary:disabled { opacity: 0.6; }
-        .success-box { background: #f5f3ff; border: 1px solid #c4b5fd; border-radius: 9px; padding: 14px; text-align: center; color: #7c3aed; font-size: 13.5px; font-weight: 500; margin-top: 20px; }
+        .summary-total-value { font-family: 'Lora', serif; font-size: 22px; font-weight: 600; color: #2563eb; }
+        .btn-primary { width: 100%; background: #2563eb; color: #fff; border: none; padding: 13px; border-radius: 9px; font-size: 14px; font-weight: 600; font-family: 'DM Sans', sans-serif; cursor: pointer; transition: background 0.15s; margin-top: 20px; }
+        .btn-primary:hover { background: #1d4ed8; }
+        .btn-primary:disabled { opacity: 0.6; cursor: not-allowed; }
+        .success-box { background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 9px; padding: 14px; text-align: center; color: #16a34a; font-size: 13.5px; font-weight: 500; margin-top: 20px; }
         .action-btns { display: flex; flex-direction: column; gap: 10px; margin-top: 12px; }
-        .btn-email { background: #2563eb; color: #fff; border: none; padding: 11px; border-radius: 9px; font-size: 13.5px; font-weight: 500; font-family: 'DM Sans', sans-serif; cursor: pointer; }
-        .btn-wa { background: #16a34a; color: #fff; border: none; padding: 11px; border-radius: 9px; font-size: 13.5px; font-weight: 500; font-family: 'DM Sans', sans-serif; cursor: pointer; }
-        .btn-secondary { background: #f8faff; color: #374151; border: 1.5px solid #e5e9f5; padding: 11px; border-radius: 9px; font-size: 13.5px; font-weight: 500; font-family: 'DM Sans', sans-serif; cursor: pointer; text-decoration: none; display: block; text-align: center; }
-        .valid-badge { display: inline-flex; align-items: center; gap: 5px; background: #f5f3ff; color: #7c3aed; padding: 4px 10px; border-radius: 20px; font-size: 12px; font-weight: 500; margin-bottom: 16px; }
+        .btn-email { background: #2563eb; color: #fff; border: none; padding: 11px; border-radius: 9px; font-size: 13.5px; font-weight: 500; font-family: 'DM Sans', sans-serif; cursor: pointer; transition: background 0.15s; display: flex; align-items: center; justify-content: center; gap: 8px; }
+        .btn-email:hover { background: #1d4ed8; }
+        .btn-whatsapp { background: #16a34a; color: #fff; border: none; padding: 11px; border-radius: 9px; font-size: 13.5px; font-weight: 500; font-family: 'DM Sans', sans-serif; cursor: pointer; transition: background 0.15s; display: flex; align-items: center; justify-content: center; gap: 8px; }
+        .btn-whatsapp:hover { background: #15803d; }
+        .btn-secondary { background: #f8faff; color: #374151; border: 1.5px solid #e5e9f5; padding: 11px; border-radius: 9px; font-size: 13.5px; font-weight: 500; font-family: 'DM Sans', sans-serif; cursor: pointer; transition: all 0.15s; display: flex; align-items: center; justify-content: center; gap: 8px; }
+        .btn-secondary:hover { border-color: #2563eb; color: #2563eb; }
+        .profile-missing { background: #fffbeb; border: 1px solid #fde68a; border-radius: 9px; padding: 12px 16px; font-size: 13px; color: #92400e; margin-bottom: 20px; }
+        .profile-missing a { color: #2563eb; font-weight: 500; }
       `}</style>
 
-      <div className="root">
+      <div className="editor-root">
         <aside className="sidebar">
-          <div className="sidebar-logo"><h1>Paavti</h1><p>Business Manager</p></div>
+          <div className="sidebar-logo">
+            <h1>Paavti</h1>
+            <p>Business Manager</p>
+          </div>
           <nav className="sidebar-nav">
             <div className="nav-label">Main</div>
             <a href="/dashboard" className="nav-item">
@@ -291,23 +338,22 @@ const [profile, setProfile] = useState<any>(null);
               New Invoice
             </a>
             <a href="/quote-editor" className="nav-item active">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="9" y1="13" x2="15" y2="13"/><line x1="9" y1="17" x2="11" y2="17"/></svg>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
               New Quote
             </a>
-            <div className="nav-label">Documents</div>
-            <a href="/dashboard" className="nav-item">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
-              Invoices
-            </a>
-            <a href="/quotes" className="nav-item">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
-              Quotes
+            <a href="/receipt-editor" className="nav-item">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+              New Receipt
             </a>
             <a href="/clients" className="nav-item"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>Clients</a>
             <div className="nav-label">Settings</div>
             <a href="/profile" className="nav-item">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
               Business Profile
+            </a>
+            <a href="/templates" className="nav-item">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg>
+              Templates
             </a>
           </nav>
           <div className="sidebar-footer">
@@ -320,26 +366,41 @@ const [profile, setProfile] = useState<any>(null);
 
         <main className="main">
           <div className="page-header">
-            <h2>New Quote</h2>
-            <p>Create an estimate for your client before raising an invoice.</p>
+            <h2>New Receipt</h2>
+            <p>Confirm a payment received against an invoice.</p>
           </div>
+
+          {!profile && (
+            <div className="profile-missing">
+              ⚠️ Business profile incomplete. <a href="/profile">Set it up here</a> so your receipts include your details.
+            </div>
+          )}
 
           <div className="editor-grid">
             <div>
               <div className="card">
                 <div className="card-header">
-                  <div className="card-icon" style={{ background: '#f5f3ff' }}>
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#7c3aed" strokeWidth="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                  <div className="card-icon" style={{ background: '#eff6ff' }}>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#2563eb" strokeWidth="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
                   </div>
-                  <h3>Quote Details</h3>
+                  <h3>Receipt Details</h3>
                 </div>
                 <div className="card-body">
                   <div className="form-row">
-                    <div className="field"><label>Quote Number</label><input name="quoteNumber" value={quoteData.quoteNumber} className="readonly" readOnly /></div>
-                    <div className="field"><label>Date</label><input type="date" name="date" value={quoteData.date} onChange={handleChange} /></div>
+                    <div className="field">
+                      <label>Receipt Number</label>
+                      <input name="receiptNumber" value={receiptData.receiptNumber} onChange={handleChange} className="readonly" readOnly />
+                    </div>
+                    <div className="field">
+                      <label>Date</label>
+                      <input type="date" name="date" value={receiptData.date} onChange={handleChange} />
+                    </div>
                   </div>
-                  <div className="form-row">
-                    <div className="field"><label>Valid Until</label><input type="date" name="validUntil" value={quoteData.validUntil} onChange={handleChange} /></div>
+                  <div className="form-row single">
+                    <div className="field">
+                      <label>Against Invoice (optional)</label>
+                      <input name="invoiceRef" value={receiptData.invoiceRef} onChange={handleChange} placeholder="INV-001" />
+                    </div>
                   </div>
                 </div>
               </div>
@@ -353,51 +414,53 @@ const [profile, setProfile] = useState<any>(null);
                 </div>
                 <div className="card-body">
                   <div className="form-row">
-                    <div className="field"><label>Client Name</label><input name="clientName" value={quoteData.clientName} onChange={handleChange} placeholder="Acme Corp" /></div>
-                    <div className="field"><label>Client Email</label><input type="email" name="clientEmail" value={quoteData.clientEmail} onChange={handleChange} placeholder="client@company.com" /></div>
+                    <div className="field">
+                      <label>Client Name</label>
+                      <input name="clientName" value={receiptData.clientName} onChange={handleChange} placeholder="Acme Corp" />
+                    </div>
+                    <div className="field">
+                      <label>Client Email</label>
+                      <input type="email" name="clientEmail" value={receiptData.clientEmail} onChange={handleChange} placeholder="client@company.com" />
+                    </div>
                   </div>
                   <div className="form-row single">
-                    <div className="field"><label>Client Address</label><input name="clientAddress" value={quoteData.clientAddress} onChange={handleChange} placeholder="Street, City, State, Pincode" /></div>
-                  </div>
-                </div>
-              </div>
-
-              <div className="card">
-                <div className="card-header">
-                  <div className="card-icon" style={{ background: '#f5f3ff' }}>
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#7c3aed" strokeWidth="2"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
-                  </div>
-                  <h3>Line Items</h3>
-                </div>
-                <div className="card-body">
-                  {quoteData.items.map((item, i) => (
-                    <div key={i} className="item-row">
-                      <input className="item-input" placeholder="Description" value={item.description} onChange={e => handleItemChange(i, 'description', e.target.value)} />
-                      <input className="item-input" placeholder="Amount" type="number" value={item.amount} onChange={e => handleItemChange(i, 'amount', e.target.value)} />
-                      {quoteData.items.length > 1 && (
-                        <button className="remove-btn" onClick={() => removeItem(i)}>
-                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-                        </button>
-                      )}
+                    <div className="field">
+                      <label>Client Address</label>
+                      <input name="clientAddress" value={receiptData.clientAddress} onChange={handleChange} placeholder="Street, City, State, Pincode" />
                     </div>
-                  ))}
-                  <button onClick={addItem} className="add-item-btn">
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-                    Add Line Item
-                  </button>
+                  </div>
                 </div>
               </div>
 
               <div className="card">
                 <div className="card-header">
-                  <div className="card-icon" style={{ background: '#f5f3ff' }}>
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#7c3aed" strokeWidth="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+                  <div className="card-icon" style={{ background: '#fff7ed' }}>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#ea580c" strokeWidth="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
                   </div>
-                  <h3>Notes (optional)</h3>
+                  <h3>Payment Details</h3>
                 </div>
                 <div className="card-body">
-                  <div className="field">
-                    <textarea name="notes" value={quoteData.notes} onChange={handleChange} rows={3} placeholder="Payment terms, conditions, or any other notes..." />
+                  <div className="form-row">
+                    <div className="field">
+                      <label>Amount Received (Rs.)</label>
+                      <input type="number" name="amount" value={receiptData.amount} onChange={handleChange} />
+                    </div>
+                    <div className="field">
+                      <label>Payment Mode</label>
+                      <select name="paymentMode" value={receiptData.paymentMode} onChange={handleChange}>
+                        <option value="UPI">UPI</option>
+                        <option value="Bank Transfer">Bank Transfer</option>
+                        <option value="Cash">Cash</option>
+                        <option value="Cheque">Cheque</option>
+                        <option value="Card">Card</option>
+                      </select>
+                    </div>
+                  </div>
+                  <div className="form-row single">
+                    <div className="field">
+                      <label>Notes (optional)</label>
+                      <textarea name="notes" value={receiptData.notes} onChange={handleChange} placeholder="e.g. Cheque no. 001234, partial payment, etc." />
+                    </div>
                   </div>
                 </div>
               </div>
@@ -405,39 +468,69 @@ const [profile, setProfile] = useState<any>(null);
 
             <div>
               <div className="summary-card">
-                <div className="summary-header"><h3>Quote Summary</h3></div>
+                <div className="summary-header">
+                  <h3>Receipt Summary</h3>
+                </div>
                 <div className="summary-body">
-                  <div className="valid-badge">
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-                    Valid until {quoteData.validUntil}
-                  </div>
-                  <div className="summary-row"><span>Quote</span><span style={{ fontWeight: 600 }}>{quoteData.quoteNumber}</span></div>
-                  <div className="summary-row"><span>Client</span><span>{quoteData.clientName || '—'}</span></div>
-                  <div className="summary-row"><span>Items</span><span>{quoteData.items.filter(i => i.description).length}</span></div>
-                  <hr className="summary-divider" />
-                  {quoteData.items.filter(i => i.description || i.amount).map((item, i) => (
-                    <div key={i} className="summary-row">
-                      <span style={{ color: '#9ca3af', fontSize: 12 }}>{item.description || `Item ${i+1}`}</span>
-                      <span>Rs. {(parseFloat(item.amount) || 0).toLocaleString('en-IN')}</span>
+                  {profile && (
+                    <div className="summary-business">
+                      <div className="summary-business-name">{profile.businessName}</div>
+                      <div className="summary-business-detail">{profile.gstin ? `GSTIN: ${profile.gstin}` : 'No GSTIN set'}</div>
+                      <div className="summary-business-detail">{profile.city}, {profile.state}</div>
                     </div>
-                  ))}
-                  <hr className="summary-divider" />
-                  <div className="summary-total">
-                    <div className="summary-total-label">Total Estimate</div>
-                    <div className="summary-total-value">Rs. {total.toLocaleString('en-IN')}</div>
+                  )}
+
+                  <div className="summary-inv-row">
+                    <span>Receipt</span>
+                    <span style={{ fontWeight: 600 }}>{receiptData.receiptNumber}</span>
                   </div>
-                  {!saved ? (
-                    <button onClick={handleGenerate} disabled={loading} className="btn-primary">
-                      {loading ? 'Generating…' : '↓ Generate & Download Quote'}
+                  <div className="summary-inv-row">
+                    <span>Date</span>
+                    <span>{receiptData.date}</span>
+                  </div>
+                  <div className="summary-inv-row">
+                    <span>Client</span>
+                    <span>{receiptData.clientName || '—'}</span>
+                  </div>
+                  <div className="summary-inv-row">
+                    <span>Against</span>
+                    <span>{receiptData.invoiceRef || '—'}</span>
+                  </div>
+                  <div className="summary-inv-row">
+                    <span>Mode</span>
+                    <span>{receiptData.paymentMode}</span>
+                  </div>
+
+                  <hr className="summary-divider" />
+
+                  <div className="summary-total">
+                    <div className="summary-total-label">Received</div>
+                    <div className="summary-total-value">Rs. {amountReceived.toLocaleString('en-IN')}</div>
+                  </div>
+
+                  {!receiptSaved ? (
+                    <button onClick={generateAndSavePDF} disabled={loading} className="btn-primary">
+                      {loading ? 'Generating…' : '↓ Generate & Download PDF'}
                     </button>
                   ) : (
                     <>
-                      <div className="success-box">✅ Quote saved!</div>
+                      <div className="success-box">✅ Receipt saved successfully!</div>
                       <div className="action-btns">
-                        <button onClick={handleGenerate} disabled={loading} className="btn-secondary">Download Again</button>
-                        <button onClick={sendEmail} disabled={sending} className="btn-email">{sending ? 'Sending…' : '✉ Email to Client'}</button>
-                        <button onClick={sendWhatsApp} className="btn-wa">💬 WhatsApp</button>
-                        <a href="/quotes" className="btn-secondary">View All Quotes →</a>
+                        <button onClick={generateAndSavePDF} disabled={loading} className="btn-secondary">
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                          Download Again
+                        </button>
+                        <button onClick={sendEmail} disabled={sending} className="btn-email">
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+                          {sending ? 'Sending…' : 'Email to Client'}
+                        </button>
+                        <button onClick={sendWhatsApp} className="btn-whatsapp">
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>
+                          Send via WhatsApp
+                        </button>
+                        <button onClick={() => window.location.href = '/dashboard'} className="btn-secondary">
+                          ← Back to Dashboard
+                        </button>
                       </div>
                     </>
                   )}
@@ -447,17 +540,6 @@ const [profile, setProfile] = useState<any>(null);
           </div>
         </main>
       </div>
-   {showLimitModal && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 50, display: 'flex', alignItems: 'center', justifyContent: 'center' }} onClick={() => setShowLimitModal(false)}>
-          <div style={{ background: '#fff', borderRadius: 16, width: 440, padding: 36, textAlign: 'center' }} onClick={e => e.stopPropagation()}>
-            <div style={{ fontSize: 40, marginBottom: 16 }}>⚡</div>
-            <div style={{ fontFamily: 'Lora, serif', fontSize: 20, color: '#0f1f5c', fontWeight: 600, marginBottom: 10 }}>Monthly limit reached</div>
-            <div style={{ fontSize: 14, color: '#6b7280', lineHeight: 1.6, marginBottom: 28 }}>You have used all 5 free quotes this month. Upgrade to Pro for unlimited quotes, invoices and more.</div>
-            <a href="/pricing" style={{ display: 'block', width: '100%', background: '#2563eb', color: '#fff', padding: 12, borderRadius: 9, fontSize: 14, fontWeight: 600, textDecoration: 'none', marginBottom: 10 }}>Upgrade to Pro →</a>
-            <button style={{ display: 'block', width: '100%', background: '#f3f4f6', color: '#374151', padding: 12, borderRadius: 9, fontSize: 14, border: 'none', cursor: 'pointer' }} onClick={() => setShowLimitModal(false)}>Maybe later</button>
-          </div>
-        </div>
-      )}
     </>
   );
 }

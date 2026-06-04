@@ -238,6 +238,7 @@ export default function ReceiptEditor() {
           total: amountReceived.toLocaleString('en-IN'),
           date: receiptData.date,
           pdfBase64,
+          docType: 'receipt',
         }),
       });
       if (res.ok) {
