@@ -4,6 +4,8 @@ import { useEffect, useState } from 'react';
 import { onAuthStateChanged } from 'firebase/auth';
 import { auth, db } from '../../lib/firebase';
 import { collection, query, where, getDocs, orderBy, addDoc, serverTimestamp, doc, deleteDoc } from 'firebase/firestore';
+import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { storage } from '../../lib/firebase';
 
 const CATEGORIES = ['Software', 'Travel', 'Office', 'Contractor', 'Marketing', 'Meals', 'Tax', 'Other'];
 const categoryColors: Record<string, { bg: string; color: string }> = {
@@ -23,6 +25,7 @@ export default function ExpensesPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [showForm, setShowForm] = useState(false);
+  const [billPhotoFile, setBillPhotoFile] = useState<File | null>(null);
   const [form, setForm] = useState({
     date: new Date().toISOString().split('T')[0],
     category: 'Software',
@@ -58,19 +61,27 @@ export default function ExpensesPage() {
 
   const handleAdd = async () => {
     if (!form.description || !form.amount) { alert('Please fill description and amount.'); return; }
+    let billPhotoUrl = '';
     setSaving(true);
     try {
-      await addDoc(collection(db, 'expenses'), {
-        userId: user.uid,
-        date: form.date,
-        category: form.category,
-        description: form.description,
-        vendor: form.vendor,
-        amount: parseFloat(form.amount),
-        reference: form.reference,
-        createdAt: serverTimestamp(),
-      });
+      if (billPhotoFile) {
+          const photoRef = ref(storage, \`bills/\${user.uid}/\${Date.now()}_\${billPhotoFile.name}\`);
+          const snap = await uploadBytes(photoRef, billPhotoFile);
+          billPhotoUrl = await getDownloadURL(snap.ref);
+        }
+        await addDoc(collection(db, 'expenses'), {
+          userId: user.uid,
+          date: form.date,
+          category: form.category,
+          description: form.description,
+          vendor: form.vendor,
+          amount: parseFloat(form.amount),
+          reference: form.reference,
+          billPhotoUrl,
+          createdAt: serverTimestamp(),
+        });
       setForm({ date: new Date().toISOString().split('T')[0], category: 'Software', description: '', vendor: '', amount: '', reference: '' });
+      setBillPhotoFile(null);
       setShowForm(false);
       await fetchExpenses(user.uid);
     } catch (err) {
@@ -181,6 +192,8 @@ export default function ExpensesPage() {
         .btn-cancel { background: #f3f4f6; color: #374151; border: none; padding: 9px 20px; border-radius: 8px; font-size: 13.5px; font-weight: 500; cursor: pointer; font-family: 'DM Sans', sans-serif; }
         .btn-save { background: #2563eb; color: #fff; border: none; padding: 9px 20px; border-radius: 8px; font-size: 13.5px; font-weight: 500; cursor: pointer; font-family: 'DM Sans', sans-serif; }
         .btn-save:disabled { opacity: 0.6; }
+        .bill-photo-link { display: inline-flex; align-items: center; gap: 4px; font-size: 11.5px; color: #2563eb; text-decoration: none; font-weight: 500; }
+        .bill-photo-link:hover { text-decoration: underline; }
       `}</style>
 
       <div className="root">
@@ -295,6 +308,13 @@ export default function ExpensesPage() {
               </div>
               <div className="form-row single">
                 <div className="field"><label>Reference / Notes</label><input name="reference" value={form.reference} onChange={handleChange} placeholder="Invoice number, receipt ID, or any notes" /></div>
+                <div className="form-row single">
+                  <div className="field">
+                    <label>Bill Photo (optional)</label>
+                    <input type="file" accept="image/*" onChange={(e) => setBillPhotoFile(e.target.files?.[0] || null)} style={{ padding: '8px 0' }} />
+                    {billPhotoFile && <div style={{ fontSize: '12px', color: '#16a34a', marginTop: '4px' }}>Selected: {billPhotoFile.name}</div>}
+                  </div>
+                </div>
               </div>
             </div>
             <div className="modal-footer">
