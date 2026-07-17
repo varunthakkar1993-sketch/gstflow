@@ -72,6 +72,11 @@ export default function Reports() {
     return sum + (sub * rate / 100);
   }, 0);
   const totalExpenseAmt = expenses.reduce((sum, exp) => sum + (exp.amount || 0), 0);
+  const totalGSTInput = expenses.reduce((sum, exp) => {
+    const rate = parseFloat(exp.gstRate) || 0;
+    return sum + ((exp.amount || 0) * rate / (100 + rate));
+  }, 0);
+  const netGSTPayable = totalGSTOutput - totalGSTInput;
   const netProfit = totalRevenue - totalExpenseAmt;
 
   const cgstTotal = invoices.reduce((sum, inv) => {
@@ -141,7 +146,7 @@ export default function Reports() {
         { label: 'Revenue', value: `Rs. ${totalRevenue.toLocaleString('en-IN')}` },
         { label: 'Expenses', value: `Rs. ${totalExpenseAmt.toLocaleString('en-IN')}` },
         { label: 'Net Profit', value: `Rs. ${netProfit.toLocaleString('en-IN')}` },
-        { label: 'GST Output', value: `Rs. ${totalGSTOutput.toFixed(2)}` },
+        { label: 'Net GST', value: `Rs. ${netGSTPayable.toFixed(2)}` },
       ];
       cards.forEach((c, i) => {
         const cx = 14 + (cardW + 4) * i;
@@ -257,7 +262,7 @@ export default function Reports() {
       if (y > ph - 50) { pdf.addPage(); y = 20; }
       pdf.setFontSize(10); pdf.setFont('helvetica', 'bold');
       pdf.setTextColor(15, 31, 92);
-      pdf.text('GST Summary (Output Tax)', 14, y); y += 8;
+      pdf.text('GST Summary', 14, y); y += 8;
 
       pdf.setFontSize(8.5); pdf.setFont('helvetica', 'normal');
       pdf.setTextColor(60, 70, 90);
@@ -552,8 +557,8 @@ export default function Reports() {
 
               <div className="card">
                 <div className="card-header">
-                  <h3>GST Summary (Output Tax)</h3>
-                  <span>Input credit not yet tracked</span>
+                  <h3>GST Summary</h3>
+                  <span>Output tax, input credit, net payable</span>
                 </div>
                 <div className="table-wrap">
                   <table>
@@ -576,6 +581,14 @@ export default function Reports() {
                       <tr className="total-row">
                         <td>Total Output Tax</td>
                         <td>Rs. {totalGSTOutput.toFixed(2)}</td>
+                      </tr>
+                      <tr>
+                        <td>Input Credit (from expenses)</td>
+                        <td style={{ color: '#16a34a' }}>- Rs. {totalGSTInput.toFixed(2)}</td>
+                      </tr>
+                      <tr className="total-row">
+                        <td>Net GST Payable</td>
+                        <td style={{ color: netGSTPayable >= 0 ? '#dc2626' : '#16a34a' }}>Rs. {netGSTPayable.toFixed(2)}</td>
                       </tr>
                     </tbody>
                   </table>

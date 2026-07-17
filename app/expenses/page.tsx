@@ -100,7 +100,7 @@ export default function ExpensesPage() {
           billPhotoUrl,
           createdAt: serverTimestamp(),
         });
-      setForm({ date: new Date().toISOString().split('T')[0], category: 'Software', description: '', vendor: '', amount: '', reference: '' });
+      setForm({ date: new Date().toISOString().split('T')[0], category: 'Software', description: '', vendor: '', amount: '', reference: '', gstRate: '0' });
       setBillPhotoBase64('');
       setBillPhotoName('');
       setShowForm(false);
@@ -326,6 +326,7 @@ export default function ExpensesPage() {
               <div className="form-row">
                 <div className="field"><label>Vendor / Paid To</label><input name="vendor" value={form.vendor} onChange={handleChange} placeholder="e.g. Amazon Web Services" /></div>
                 <div className="field"><label>Amount (Rs.) *</label><input type="number" name="amount" value={form.amount} onChange={handleChange} placeholder="0" /></div>
+                <div className="field"><label>GST on this expense</label><select name="gstRate" value={form.gstRate} onChange={handleChange}><option value="0">0% - No GST</option><option value="5">5%</option><option value="12">12%</option><option value="18">18%</option><option value="28">28%</option></select></div>
               </div>
               <div className="form-row single">
                 <div className="field"><label>Reference / Notes</label><input name="reference" value={form.reference} onChange={handleChange} placeholder="Invoice number, receipt ID, or any notes" /></div>
