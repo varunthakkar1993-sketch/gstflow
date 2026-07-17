@@ -55,6 +55,7 @@ export default function ExpensesPage() {
     vendor: '',
     amount: '',
     reference: '',
+    gstRate: '0',
   });
 
   useEffect(() => {
