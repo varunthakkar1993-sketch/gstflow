@@ -4,8 +4,6 @@ import { useEffect, useState } from 'react';
 import { onAuthStateChanged } from 'firebase/auth';
 import { auth, db } from '../../lib/firebase';
 import { collection, query, where, getDocs, orderBy, addDoc, serverTimestamp, doc, deleteDoc } from 'firebase/firestore';
-import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
-import { storage } from '../../lib/firebase';
 
 const CATEGORIES = ['Software', 'Travel', 'Office', 'Contractor', 'Marketing', 'Meals', 'Tax', 'Other'];
 const categoryColors: Record<string, { bg: string; color: string }> = {
@@ -25,7 +23,31 @@ export default function ExpensesPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [showForm, setShowForm] = useState(false);
-  const [billPhotoFile, setBillPhotoFile] = useState<File | null>(null);
+  const [billPhotoBase64, setBillPhotoBase64] = useState('');
+  const [billPhotoName, setBillPhotoName] = useState('');
+
+  const handleBillPhoto = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setBillPhotoName(file.name);
+    const reader = new FileReader();
+    reader.onload = () => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        const maxW = 800;
+        const scale = img.width > maxW ? maxW / img.width : 1;
+        canvas.width = img.width * scale;
+        canvas.height = img.height * scale;
+        const ctx = canvas.getContext('2d')!;
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+        const compressed = canvas.toDataURL('image/jpeg', 0.7);
+        setBillPhotoBase64(compressed);
+      };
+      img.src = reader.result as string;
+    };
+    reader.readAsDataURL(file);
+  };
   const [form, setForm] = useState({
     date: new Date().toISOString().split('T')[0],
     category: 'Software',
@@ -61,13 +83,11 @@ export default function ExpensesPage() {
 
   const handleAdd = async () => {
     if (!form.description || !form.amount) { alert('Please fill description and amount.'); return; }
-    let billPhotoUrl = '';
+
     setSaving(true);
     try {
       if (billPhotoFile) {
           const photoRef = ref(storage, \`bills/\${user.uid}/\${Date.now()}_\${billPhotoFile.name}\`);
-          const snap = await uploadBytes(photoRef, billPhotoFile);
-          billPhotoUrl = await getDownloadURL(snap.ref);
         }
         await addDoc(collection(db, 'expenses'), {
           userId: user.uid,
@@ -81,7 +101,8 @@ export default function ExpensesPage() {
           createdAt: serverTimestamp(),
         });
       setForm({ date: new Date().toISOString().split('T')[0], category: 'Software', description: '', vendor: '', amount: '', reference: '' });
-      setBillPhotoFile(null);
+      setBillPhotoBase64('');
+      setBillPhotoName('');
       setShowForm(false);
       await fetchExpenses(user.uid);
     } catch (err) {
@@ -311,8 +332,8 @@ export default function ExpensesPage() {
                 <div className="form-row single">
                   <div className="field">
                     <label>Bill Photo (optional)</label>
-                    <input type="file" accept="image/*" onChange={(e) => setBillPhotoFile(e.target.files?.[0] || null)} style={{ padding: '8px 0' }} />
-                    {billPhotoFile && <div style={{ fontSize: '12px', color: '#16a34a', marginTop: '4px' }}>Selected: {billPhotoFile.name}</div>}
+                    <input type="file" accept="image/*" onChange={handleBillPhoto} style={{ padding: '8px 0' }} />
+                    {billPhotoBase64 && <div style={{ marginTop: '8px' }}><img src={billPhotoBase64} alt="Bill" style={{ maxWidth: '120px', borderRadius: '6px', border: '1px solid #e5e9f5' }} /><div style={{ fontSize: '12px', color: '#16a34a', marginTop: '4px' }}>{billPhotoName}</div></div>}
                   </div>
                 </div>
               </div>
