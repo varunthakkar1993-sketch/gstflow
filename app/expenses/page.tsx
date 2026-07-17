@@ -86,9 +86,6 @@ export default function ExpensesPage() {
 
     setSaving(true);
     try {
-      if (billPhotoFile) {
-          const photoRef = ref(storage, \`bills/\${user.uid}/\${Date.now()}_\${billPhotoFile.name}\`);
-        }
         await addDoc(collection(db, 'expenses'), {
           userId: user.uid,
           date: form.date,
@@ -97,7 +94,8 @@ export default function ExpensesPage() {
           vendor: form.vendor,
           amount: parseFloat(form.amount),
           reference: form.reference,
-          billPhotoUrl,
+          gstRate: form.gstRate || '0',
+          billPhotoBase64: billPhotoBase64 || '',
           createdAt: serverTimestamp(),
         });
       setForm({ date: new Date().toISOString().split('T')[0], category: 'Software', description: '', vendor: '', amount: '', reference: '', gstRate: '0' });
