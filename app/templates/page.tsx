@@ -109,6 +109,15 @@ export default function Templates() {
         .card-tag.quote { color: #16a34a; background: #f0fdf4; }
         .use-btn { width: 100%; background: #0f1f5c; color: #fff; padding: 11px; border-radius: 8px; font-size: 13.5px; font-weight: 600; border: none; cursor: pointer; font-family: 'DM Sans', sans-serif; transition: background 0.15s; }
         .use-btn:hover { background: #1a2f7a; }
+      
+        @media (max-width: 768px) {
+          .nav { padding: 0 16px; flex-wrap: wrap; gap: 8px; }
+          .page { padding: 24px 16px 40px; }
+          .page-title { font-size: 24px; }
+          .page-sub { font-size: 14px; margin-bottom: 24px; }
+          .grid { grid-template-columns: 1fr; gap: 16px; }
+          .card { padding: 20px; }
+        }
       `}</style>
 
       <nav className="nav">
