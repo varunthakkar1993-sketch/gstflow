@@ -169,7 +169,8 @@ export default function ExpensesPage() {
 
         @media (max-width: 768px) {
           .editor-root, .root { flex-direction: column; }
-          .sidebar { width: 100%; min-height: auto; position: relative; flex-direction: row; flex-wrap: wrap; align-items: center; }
+          .editor-root, .root { flex-direction: column; min-height: auto; }
+          .sidebar { width: 100%; min-height: auto; position: relative; flex-direction: row; flex-wrap: wrap; align-items: center; top: auto; bottom: auto; left: auto; height: auto; }
           .sidebar-logo { padding: 14px 16px; border-bottom: none; }
           .sidebar-logo h1 { font-size: 18px; }
           .sidebar-logo p { display: none; }
@@ -287,7 +288,8 @@ export default function ExpensesPage() {
 
         @media (max-width: 768px) {
           .editor-root, .root { flex-direction: column; }
-          .sidebar { width: 100%; min-height: auto; position: relative; flex-direction: row; flex-wrap: wrap; align-items: center; }
+          .editor-root, .root { flex-direction: column; min-height: auto; }
+          .sidebar { width: 100%; min-height: auto; position: relative; flex-direction: row; flex-wrap: wrap; align-items: center; top: auto; bottom: auto; left: auto; height: auto; }
           .sidebar-logo { padding: 14px 16px; border-bottom: none; }
           .sidebar-logo h1 { font-size: 18px; }
           .sidebar-logo p { display: none; }
