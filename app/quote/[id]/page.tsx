@@ -235,7 +235,7 @@ export default function QuoteDetail() {
 
       <div style={{ display: 'flex', minHeight: '100vh' }}>
         <aside className="sidebar">
-          <div className="sidebar-logo"><img src="/logo-white.svg" alt="Paavti" style={{ height: '28px' }} /><p>Business Manager</p></div>
+          <div className="sidebar-logo"><img src="/logo-white.svg" alt="Paavti" style={{ height: '38px' }} /><p>Business Manager</p></div>
           <nav className="sidebar-nav">
             <div className="nav-label">Main</div>
             <a href="/dashboard" className="nav-item">

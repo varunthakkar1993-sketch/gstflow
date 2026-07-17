@@ -145,7 +145,7 @@ export default function ProfilePage() {
       <div className="profile-root">
         <aside className="sidebar">
           <div className="sidebar-logo">
-            <img src="/logo-white.svg" alt="Paavti" style={{ height: '28px' }} />
+            <img src="/logo-white.svg" alt="Paavti" style={{ height: '38px' }} />
             <p>Business Manager</p>
           </div>
           <nav className="sidebar-nav">
