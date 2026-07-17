@@ -82,6 +82,31 @@ export default function Home() {
         .footer-links { display: flex; gap: 24px; }
         .footer-link { font-size: 13px; color: #9ca3af; text-decoration: none; }
         .footer-link:hover { color: #2563eb; }
+      
+        @media (max-width: 768px) {
+          .nav { padding: 0 16px; height: auto; flex-wrap: wrap; gap: 8px; padding-top: 10px; padding-bottom: 10px; }
+          .nav-links { gap: 12px; flex-wrap: wrap; justify-content: center; }
+          .nav-links a { font-size: 13px; }
+          .hero { grid-template-columns: 1fr; padding: 40px 20px; gap: 32px; }
+          .hero-title { font-size: 32px; }
+          .hero-sub { font-size: 15px; }
+          .hero-visual { display: none; }
+          .hero-actions { flex-direction: column; }
+          .btn-hero-primary, .btn-hero-secondary { width: 100%; text-align: center; }
+          .hero-trust { flex-wrap: wrap; gap: 12px; }
+          .stats { padding: 40px 20px; }
+          .stats-inner { grid-template-columns: repeat(2, 1fr); gap: 12px; }
+          .stat-number { font-size: 28px; }
+          .features { padding: 48px 20px; }
+          .features-grid { grid-template-columns: 1fr; gap: 16px; }
+          .section-title { font-size: 24px; }
+          .section-sub { font-size: 14px; }
+          .how-it-works { padding: 48px 20px; }
+          .steps { grid-template-columns: 1fr; gap: 24px; }
+          .cta-section { padding: 48px 20px; }
+          .cta-section h2 { font-size: 24px; }
+          .footer { padding: 24px 20px; flex-direction: column; gap: 12px; text-align: center; }
+        }
       `}</style>
 
       <nav className="nav">
@@ -95,7 +120,7 @@ export default function Home() {
         </div>
       </nav>
 
-      <section style={{ maxWidth: 1100, margin: '0 auto', padding: '96px 60px 80px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 60, alignItems: 'center' }}>
+      <section className="hero">
         <div>
           <div className="hero-badge">
             <div className="trust-dot" />
