@@ -25,6 +25,7 @@ export default function ExpensesPage() {
   const [showForm, setShowForm] = useState(false);
   const [billPhotoBase64, setBillPhotoBase64] = useState('');
   const [billPhotoName, setBillPhotoName] = useState('');
+  const [scanning, setScanning] = useState(false);
 
   const handleBillPhoto = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -47,6 +48,33 @@ export default function ExpensesPage() {
       img.src = reader.result as string;
     };
     reader.readAsDataURL(file);
+  };
+
+  const scanBill = async () => {
+    if (!billPhotoBase64) { alert('Select a bill photo first.'); return; }
+    setScanning(true);
+    try {
+      const res = await fetch('/api/scan-bill', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ imageBase64: billPhotoBase64 }),
+      });
+      if (!res.ok) throw new Error('Scan failed');
+      const data = await res.json();
+      setForm(prev => ({
+        ...prev,
+        vendor: data.vendor || prev.vendor,
+        amount: data.amount ? String(data.amount) : prev.amount,
+        date: data.date || prev.date,
+        category: data.category || prev.category,
+        description: data.description || prev.description,
+        gstRate: data.gstRate ? String(data.gstRate) : prev.gstRate,
+      }));
+    } catch (err) {
+      alert('Could not read the bill. Please fill in manually.');
+    } finally {
+      setScanning(false);
+    }
   };
   const [form, setForm] = useState({
     date: new Date().toISOString().split('T')[0],
@@ -333,7 +361,7 @@ export default function ExpensesPage() {
                   <div className="field">
                     <label>Bill Photo (optional)</label>
                     <input type="file" accept="image/*" onChange={handleBillPhoto} style={{ padding: '8px 0' }} />
-                    {billPhotoBase64 && <div style={{ marginTop: '8px' }}><img src={billPhotoBase64} alt="Bill" style={{ maxWidth: '120px', borderRadius: '6px', border: '1px solid #e5e9f5' }} /><div style={{ fontSize: '12px', color: '#16a34a', marginTop: '4px' }}>{billPhotoName}</div></div>}
+                    {billPhotoBase64 && <div style={{ marginTop: '8px' }}><img src={billPhotoBase64} alt="Bill" style={{ maxWidth: '120px', borderRadius: '6px', border: '1px solid #e5e9f5' }} /><div style={{ fontSize: '12px', color: '#16a34a', marginTop: '4px' }}>{billPhotoName}</div><button type="button" onClick={scanBill} disabled={scanning} style={{ marginTop: '8px', background: '#0f1f5c', color: '#fff', border: 'none', padding: '7px 16px', borderRadius: '6px', fontSize: '12.5px', fontWeight: 600, cursor: 'pointer', fontFamily: "'DM Sans', sans-serif", opacity: scanning ? 0.6 : 1 }}>{scanning ? 'Scanning...' : 'Scan Bill (auto-fill)'}</button></div>}
                   </div>
                 </div>
               </div>
