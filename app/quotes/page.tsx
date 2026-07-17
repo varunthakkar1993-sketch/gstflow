@@ -68,7 +68,7 @@ export default function QuotesPage() {
         td { font-size: 14px; }
 
         
-        .menu-toggle { display: none; background: none; border: none; color: #fff; font-size: 24px; cursor: pointer; padding: 4px 8px; }
+        .menu-toggle { display: none; background: none; border: none; color: #ffffff; font-size: 30px; cursor: pointer; padding: 4px 8px; }
         @media (max-width: 768px) {
           .editor-root, .root { flex-direction: column; }
           .editor-root, .root { flex-direction: column; min-height: auto; }
@@ -78,12 +78,12 @@ export default function QuotesPage() {
           .sidebar-logo p { display: none; }
           .sidebar-logo { display: flex !important; align-items: center; width: 100%; gap: 12px; padding: 12px 16px !important; }
           .sidebar-logo p { display: none; }
-          .sidebar-logo img { height: 32px !important; }
-          .menu-toggle { display: block !important; margin-left: auto; font-size: 28px; }
+          .sidebar-logo img { height: 42px !important; }
+          .menu-toggle { display: block !important; margin-left: auto; font-size: 32px; color: #ffffff !important; }
           .sidebar-nav { display: none !important; flex-direction: column; padding: 0 12px 12px; gap: 2px; width: 100%; }
           .sidebar-nav.nav-open { display: flex !important; }
           .nav-label { display: none; }
-          .nav-item { padding: 7px 10px; font-size: 12px; white-space: nowrap; gap: 6px; }
+          .nav-item { padding: 12px 14px; font-size: 15px; white-space: nowrap; gap: 10px; }
           .nav-item svg { width: 14px; height: 14px; }
           .sidebar-footer { display: none; }
           .main { margin-left: 0 !important; padding: 16px !important; width: 100% !important; }
@@ -172,12 +172,12 @@ export default function QuotesPage() {
           .sidebar-logo p { display: none; }
           .sidebar-logo { display: flex !important; align-items: center; width: 100%; gap: 12px; padding: 12px 16px !important; }
           .sidebar-logo p { display: none; }
-          .sidebar-logo img { height: 32px !important; }
-          .menu-toggle { display: block !important; margin-left: auto; font-size: 28px; }
+          .sidebar-logo img { height: 42px !important; }
+          .menu-toggle { display: block !important; margin-left: auto; font-size: 32px; color: #ffffff !important; }
           .sidebar-nav { display: none !important; flex-direction: column; padding: 0 12px 12px; gap: 2px; width: 100%; }
           .sidebar-nav.nav-open { display: flex !important; }
           .nav-label { display: none; }
-          .nav-item { padding: 7px 10px; font-size: 12px; white-space: nowrap; gap: 6px; }
+          .nav-item { padding: 12px 14px; font-size: 15px; white-space: nowrap; gap: 10px; }
           .nav-item svg { width: 14px; height: 14px; }
           .sidebar-footer { display: none; }
           .main { margin-left: 0 !important; padding: 16px !important; width: 100% !important; }
