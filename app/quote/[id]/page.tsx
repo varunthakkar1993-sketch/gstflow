@@ -11,6 +11,7 @@ export default function QuoteDetail() {
   const params = useParams();
   const id = params?.id as string;
   const [quote, setQuote] = useState<any>(null);
+  const [showMenu, setShowMenu] = useState(false);
   const [profile, setProfile] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [downloading, setDownloading] = useState(false);
