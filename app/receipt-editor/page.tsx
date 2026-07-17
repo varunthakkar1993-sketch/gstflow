@@ -338,7 +338,7 @@ export default function ReceiptEditor() {
           .nav-item { padding: 7px 10px; font-size: 12px; white-space: nowrap; gap: 6px; }
           .nav-item svg { width: 14px; height: 14px; }
           .sidebar-footer { display: none; }
-          .main { margin-left: 0; padding: 16px; }
+          .main { margin-left: 0 !important; padding: 16px !important; width: 100% !important; }
           .page-header { margin-bottom: 16px; }
           .page-header h2 { font-size: 22px; }
           .page-header p { font-size: 13px; }
