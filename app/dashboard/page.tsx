@@ -116,7 +116,7 @@ export default function Dashboard() {
 
         @media (max-width: 768px) {
           .editor-root, .root { flex-direction: column; }
-          .editor-root, .root { flex-direction: column; min-height: auto; }
+          .editor-root, .root, .dash-root { flex-direction: column !important; min-height: auto !important; }
           .sidebar { width: 100% !important; min-height: auto !important; position: relative !important; flex-direction: row !important; flex-wrap: wrap !important; align-items: center; top: auto !important; bottom: auto !important; left: auto !important; height: auto !important; z-index: auto !important; }
           .sidebar-logo { padding: 14px 16px; border-bottom: none; }
           .sidebar-logo h1 { font-size: 18px; }
@@ -240,7 +240,7 @@ export default function Dashboard() {
 
         @media (max-width: 768px) {
           .editor-root, .root { flex-direction: column; }
-          .editor-root, .root { flex-direction: column; min-height: auto; }
+          .editor-root, .root, .dash-root { flex-direction: column !important; min-height: auto !important; }
           .sidebar { width: 100% !important; min-height: auto !important; position: relative !important; flex-direction: row !important; flex-wrap: wrap !important; align-items: center; top: auto !important; bottom: auto !important; left: auto !important; height: auto !important; z-index: auto !important; }
           .sidebar-logo { padding: 14px 16px; border-bottom: none; }
           .sidebar-logo h1 { font-size: 18px; }
