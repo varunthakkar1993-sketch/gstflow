@@ -362,7 +362,7 @@ export default function ReceiptEditor() {
       <div className="editor-root">
         <aside className="sidebar">
           <div className="sidebar-logo">
-            <h1>Paavti</h1>
+            <img src="/logo-white.svg" alt="Paavti" style={{ height: '28px' }} />
             <p>Business Manager</p>
           </div>
           <nav className="sidebar-nav">

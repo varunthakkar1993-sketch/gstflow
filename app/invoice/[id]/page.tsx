@@ -282,7 +282,7 @@ export default function InvoiceDetail() {
       <div style={{ display: 'flex', minHeight: '100vh' }}>
         <aside className="sidebar">
           <div className="sidebar-logo">
-            <h1>Paavti</h1>
+            <img src="/logo-white.svg" alt="Paavti" style={{ height: '28px' }} />
             <p>Business Manager</p>
           </div>
           <nav className="sidebar-nav">

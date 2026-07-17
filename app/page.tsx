@@ -85,7 +85,7 @@ export default function Home() {
       `}</style>
 
       <nav className="nav">
-        <a href="/" className="nav-logo">Paav<span>ti</span></a>
+        <a href="/" className="nav-logo"><img src="/logo.svg" alt="Paavti" style={{ height: '32px' }} /></a>
         <div className="nav-links">
           <a href="#features" className="nav-link">Features</a>
           <a href="#how-it-works" className="nav-link">How it works</a>
@@ -251,7 +251,7 @@ export default function Home() {
       </section>
 
       <footer className="footer">
-        <div className="footer-logo">Paavti</div>
+        <div className="footer-logo"><img src="/logo.svg" alt="Paavti" style={{ height: '28px' }} /></div>
         <div className="footer-copy">© 2026 Paavti. Built for India.</div>
         <div className="footer-links">
           <a href="/login" className="footer-link">Login</a>
