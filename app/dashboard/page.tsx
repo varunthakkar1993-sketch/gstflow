@@ -108,7 +108,44 @@ export default function Dashboard() {
         <div style={{ width: 40, height: 40, border: '3px solid #2563eb', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.8s linear infinite', margin: '0 auto 16px' }} />
         <p style={{ color: '#6b7280', fontFamily: 'Georgia, serif' }}>Loading your workspace…</p>
       </div>
-      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+      <style>{`@keyframes spin { to { transform: rotate(360deg); } }
+        .field label { font-size: 13.5px; }
+        .field input, .field textarea, .field select { font-size: 15px; }
+        th { font-size: 12px; }
+        td { font-size: 14px; }
+
+        @media (max-width: 768px) {
+          .editor-root, .root { flex-direction: column; }
+          .sidebar { width: 100%; min-height: auto; position: relative; flex-direction: row; flex-wrap: wrap; align-items: center; }
+          .sidebar-logo { padding: 14px 16px; border-bottom: none; }
+          .sidebar-logo h1 { font-size: 18px; }
+          .sidebar-logo p { display: none; }
+          .sidebar-nav { display: flex; flex-direction: row; padding: 0 8px 10px; gap: 2px; overflow-x: auto; flex: 1; flex-wrap: nowrap; -webkit-overflow-scrolling: touch; }
+          .nav-label { display: none; }
+          .nav-item { padding: 7px 10px; font-size: 12px; white-space: nowrap; gap: 6px; }
+          .nav-item svg { width: 14px; height: 14px; }
+          .sidebar-footer { display: none; }
+          .main { margin-left: 0; padding: 16px; }
+          .page-header { margin-bottom: 16px; }
+          .page-header h2 { font-size: 22px; }
+          .page-header p { font-size: 13px; }
+          .editor-grid { grid-template-columns: 1fr; }
+          .form-row { grid-template-columns: 1fr; }
+          .summary-card { position: static; }
+          .summary-grid { grid-template-columns: repeat(2, 1fr); gap: 10px; }
+          .stats-grid { grid-template-columns: 1fr; gap: 10px; }
+          .content-grid { grid-template-columns: 1fr; }
+          .controls { flex-direction: column; align-items: stretch; }
+          .controls select, .controls button { width: 100%; }
+          .card-body { padding: 16px; }
+          .card-header { padding: 12px 16px; }
+          table { font-size: 12px; }
+          th { font-size: 10px; padding: 8px 10px; }
+          td { font-size: 12.5px; padding: 10px; }
+          .action-btns { gap: 8px; }
+          .modal { width: 95vw; max-height: 90vh; overflow-y: auto; }
+        }
+      `}</style>
     </div>
   );
 
@@ -194,6 +231,43 @@ export default function Dashboard() {
         .modal-btn-primary:hover { background: #1d4ed8; }
         .modal-btn-secondary { display: block; width: 100%; background: #f3f4f6; color: #374151; padding: 12px; border-radius: 9px; font-size: 14px; font-weight: 500; border: none; cursor: pointer; font-family: 'DM Sans', sans-serif; }
         .modal-btn-secondary:hover { background: #e5e7eb; }
+      
+        .field label { font-size: 13.5px; }
+        .field input, .field textarea, .field select { font-size: 15px; }
+        th { font-size: 12px; }
+        td { font-size: 14px; }
+
+        @media (max-width: 768px) {
+          .editor-root, .root { flex-direction: column; }
+          .sidebar { width: 100%; min-height: auto; position: relative; flex-direction: row; flex-wrap: wrap; align-items: center; }
+          .sidebar-logo { padding: 14px 16px; border-bottom: none; }
+          .sidebar-logo h1 { font-size: 18px; }
+          .sidebar-logo p { display: none; }
+          .sidebar-nav { display: flex; flex-direction: row; padding: 0 8px 10px; gap: 2px; overflow-x: auto; flex: 1; flex-wrap: nowrap; -webkit-overflow-scrolling: touch; }
+          .nav-label { display: none; }
+          .nav-item { padding: 7px 10px; font-size: 12px; white-space: nowrap; gap: 6px; }
+          .nav-item svg { width: 14px; height: 14px; }
+          .sidebar-footer { display: none; }
+          .main { margin-left: 0; padding: 16px; }
+          .page-header { margin-bottom: 16px; }
+          .page-header h2 { font-size: 22px; }
+          .page-header p { font-size: 13px; }
+          .editor-grid { grid-template-columns: 1fr; }
+          .form-row { grid-template-columns: 1fr; }
+          .summary-card { position: static; }
+          .summary-grid { grid-template-columns: repeat(2, 1fr); gap: 10px; }
+          .stats-grid { grid-template-columns: 1fr; gap: 10px; }
+          .content-grid { grid-template-columns: 1fr; }
+          .controls { flex-direction: column; align-items: stretch; }
+          .controls select, .controls button { width: 100%; }
+          .card-body { padding: 16px; }
+          .card-header { padding: 12px 16px; }
+          table { font-size: 12px; }
+          th { font-size: 10px; padding: 8px 10px; }
+          td { font-size: 12.5px; padding: 10px; }
+          .action-btns { gap: 8px; }
+          .modal { width: 95vw; max-height: 90vh; overflow-y: auto; }
+        }
       `}</style>
 
       <div className="dash-root">

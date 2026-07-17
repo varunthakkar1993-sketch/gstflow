@@ -111,7 +111,44 @@ export default function QuoteDetail() {
     window.open(`https://wa.me/?text=${msg}`, '_blank');
   };
 
-  if (loading) return <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#f0f4ff' }}><div style={{ width: 40, height: 40, border: '3px solid #7c3aed', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} /><style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style></div>;
+  if (loading) return <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#f0f4ff' }}><div style={{ width: 40, height: 40, border: '3px solid #7c3aed', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} /><style>{`@keyframes spin { to { transform: rotate(360deg); } }
+        .field label { font-size: 13.5px; }
+        .field input, .field textarea, .field select { font-size: 15px; }
+        th { font-size: 12px; }
+        td { font-size: 14px; }
+
+        @media (max-width: 768px) {
+          .editor-root, .root { flex-direction: column; }
+          .sidebar { width: 100%; min-height: auto; position: relative; flex-direction: row; flex-wrap: wrap; align-items: center; }
+          .sidebar-logo { padding: 14px 16px; border-bottom: none; }
+          .sidebar-logo h1 { font-size: 18px; }
+          .sidebar-logo p { display: none; }
+          .sidebar-nav { display: flex; flex-direction: row; padding: 0 8px 10px; gap: 2px; overflow-x: auto; flex: 1; flex-wrap: nowrap; -webkit-overflow-scrolling: touch; }
+          .nav-label { display: none; }
+          .nav-item { padding: 7px 10px; font-size: 12px; white-space: nowrap; gap: 6px; }
+          .nav-item svg { width: 14px; height: 14px; }
+          .sidebar-footer { display: none; }
+          .main { margin-left: 0; padding: 16px; }
+          .page-header { margin-bottom: 16px; }
+          .page-header h2 { font-size: 22px; }
+          .page-header p { font-size: 13px; }
+          .editor-grid { grid-template-columns: 1fr; }
+          .form-row { grid-template-columns: 1fr; }
+          .summary-card { position: static; }
+          .summary-grid { grid-template-columns: repeat(2, 1fr); gap: 10px; }
+          .stats-grid { grid-template-columns: 1fr; gap: 10px; }
+          .content-grid { grid-template-columns: 1fr; }
+          .controls { flex-direction: column; align-items: stretch; }
+          .controls select, .controls button { width: 100%; }
+          .card-body { padding: 16px; }
+          .card-header { padding: 12px 16px; }
+          table { font-size: 12px; }
+          th { font-size: 10px; padding: 8px 10px; }
+          td { font-size: 12.5px; padding: 10px; }
+          .action-btns { gap: 8px; }
+          .modal { width: 95vw; max-height: 90vh; overflow-y: auto; }
+        }
+      `}</style></div>;
   if (!quote) return <div style={{ padding: 40 }}>Quote not found. <a href="/quotes">Go back</a></div>;
 
   return (
@@ -157,6 +194,43 @@ export default function QuoteDetail() {
         .btn-green:hover { background: #15803d; }
         .btn-outline { background: #fff; color: #374151; border: 1.5px solid #e5e9f5; }
         .btn-outline:hover { border-color: #7c3aed; color: #7c3aed; }
+      
+        .field label { font-size: 13.5px; }
+        .field input, .field textarea, .field select { font-size: 15px; }
+        th { font-size: 12px; }
+        td { font-size: 14px; }
+
+        @media (max-width: 768px) {
+          .editor-root, .root { flex-direction: column; }
+          .sidebar { width: 100%; min-height: auto; position: relative; flex-direction: row; flex-wrap: wrap; align-items: center; }
+          .sidebar-logo { padding: 14px 16px; border-bottom: none; }
+          .sidebar-logo h1 { font-size: 18px; }
+          .sidebar-logo p { display: none; }
+          .sidebar-nav { display: flex; flex-direction: row; padding: 0 8px 10px; gap: 2px; overflow-x: auto; flex: 1; flex-wrap: nowrap; -webkit-overflow-scrolling: touch; }
+          .nav-label { display: none; }
+          .nav-item { padding: 7px 10px; font-size: 12px; white-space: nowrap; gap: 6px; }
+          .nav-item svg { width: 14px; height: 14px; }
+          .sidebar-footer { display: none; }
+          .main { margin-left: 0; padding: 16px; }
+          .page-header { margin-bottom: 16px; }
+          .page-header h2 { font-size: 22px; }
+          .page-header p { font-size: 13px; }
+          .editor-grid { grid-template-columns: 1fr; }
+          .form-row { grid-template-columns: 1fr; }
+          .summary-card { position: static; }
+          .summary-grid { grid-template-columns: repeat(2, 1fr); gap: 10px; }
+          .stats-grid { grid-template-columns: 1fr; gap: 10px; }
+          .content-grid { grid-template-columns: 1fr; }
+          .controls { flex-direction: column; align-items: stretch; }
+          .controls select, .controls button { width: 100%; }
+          .card-body { padding: 16px; }
+          .card-header { padding: 12px 16px; }
+          table { font-size: 12px; }
+          th { font-size: 10px; padding: 8px 10px; }
+          td { font-size: 12.5px; padding: 10px; }
+          .action-btns { gap: 8px; }
+          .modal { width: 95vw; max-height: 90vh; overflow-y: auto; }
+        }
       `}</style>
 
       <div style={{ display: 'flex', minHeight: '100vh' }}>
