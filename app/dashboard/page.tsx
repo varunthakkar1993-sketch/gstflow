@@ -8,6 +8,7 @@ import posthog from 'posthog-js';
 
 export default function Dashboard() {
   const [user, setUser] = useState<any>(null);
+  const [showMenu, setShowMenu] = useState(false);
   const [invoices, setInvoices] = useState<any[]>([]);
   const [totalExpenses, setTotalExpenses] = useState(0);
   const [thisMonthExpenses, setThisMonthExpenses] = useState(0);
@@ -114,6 +115,8 @@ export default function Dashboard() {
         th { font-size: 12px; }
         td { font-size: 14px; }
 
+        
+        .menu-toggle { display: none; background: none; border: none; color: #fff; font-size: 24px; cursor: pointer; padding: 4px 8px; }
         @media (max-width: 768px) {
           .editor-root, .root { flex-direction: column; }
           .editor-root, .root, .dash-root { flex-direction: column !important; min-height: auto !important; }
@@ -121,7 +124,12 @@ export default function Dashboard() {
           .sidebar-logo { padding: 14px 16px; border-bottom: none; }
           .sidebar-logo h1 { font-size: 18px; }
           .sidebar-logo p { display: none; }
-          .sidebar-nav { display: flex; flex-direction: row; padding: 0 8px 10px; gap: 2px; overflow-x: auto; flex: 1; flex-wrap: nowrap; -webkit-overflow-scrolling: touch; }
+          .sidebar-logo { display: flex !important; align-items: center; width: 100%; gap: 12px; padding: 12px 16px !important; }
+          .sidebar-logo p { display: none; }
+          .sidebar-logo img { height: 32px !important; }
+          .menu-toggle { display: block !important; margin-left: auto; font-size: 28px; }
+          .sidebar-nav { display: none !important; flex-direction: column; padding: 0 12px 12px; gap: 2px; width: 100%; }
+          .sidebar-nav.nav-open { display: flex !important; }
           .nav-label { display: none; }
           .nav-item { padding: 7px 10px; font-size: 12px; white-space: nowrap; gap: 6px; }
           .nav-item svg { width: 14px; height: 14px; }
@@ -245,7 +253,12 @@ export default function Dashboard() {
           .sidebar-logo { padding: 14px 16px; border-bottom: none; }
           .sidebar-logo h1 { font-size: 18px; }
           .sidebar-logo p { display: none; }
-          .sidebar-nav { display: flex; flex-direction: row; padding: 0 8px 10px; gap: 2px; overflow-x: auto; flex: 1; flex-wrap: nowrap; -webkit-overflow-scrolling: touch; }
+          .sidebar-logo { display: flex !important; align-items: center; width: 100%; gap: 12px; padding: 12px 16px !important; }
+          .sidebar-logo p { display: none; }
+          .sidebar-logo img { height: 32px !important; }
+          .menu-toggle { display: block !important; margin-left: auto; font-size: 28px; }
+          .sidebar-nav { display: none !important; flex-direction: column; padding: 0 12px 12px; gap: 2px; width: 100%; }
+          .sidebar-nav.nav-open { display: flex !important; }
           .nav-label { display: none; }
           .nav-item { padding: 7px 10px; font-size: 12px; white-space: nowrap; gap: 6px; }
           .nav-item svg { width: 14px; height: 14px; }
@@ -277,8 +290,9 @@ export default function Dashboard() {
           <div className="sidebar-logo">
             <img src="/logo-white.svg" alt="Paavti" style={{ height: '38px' }} />
             <p>Business Manager</p>
+            <button className="menu-toggle" onClick={() => setShowMenu(!showMenu)}>&#9776;</button>
           </div>
-          <nav className="sidebar-nav">
+          <nav className={`sidebar-nav ${showMenu ? "nav-open" : ""}`}>
             <div className="nav-label">Main</div>
             <a href="/dashboard" className="nav-item active">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
