@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import posthog from "posthog-js";
 
 /**
  * Free GST Invoice Generator — client-side only.
@@ -224,6 +225,14 @@ export default function InvoiceGenerator() {
       doc.text("Generated with Paavti - paavti.com", W / 2, 812, { align: "center" });
 
       doc.save(`${meta.number || "invoice"}.pdf`);
+
+      // Funnel event: someone got real value from the free tool.
+      posthog.capture("invoice_pdf_downloaded", {
+        source: "gst_invoice_generator",
+        place_of_supply: intra ? "intra_state" : "inter_state",
+        total,
+        item_count: items.length,
+      });
     } finally {
       setDownloading(false);
     }
@@ -409,6 +418,12 @@ export default function InvoiceGenerator() {
             {downloading ? "Preparing…" : "⬇ Download PDF (free)"}
           </button>
           <a href="/signup"
+            onClick={() =>
+              posthog.capture("signup_cta_clicked", {
+                source: "gst_invoice_generator",
+                cta: "save_and_send",
+              })
+            }
             className="rounded-lg border-[1.5px] border-[#2563eb] bg-white px-5 py-2.5 font-semibold text-[#2563eb] hover:bg-[#eff4ff]">
             🔒 Save &amp; send to client →
           </a>
