@@ -4,12 +4,12 @@ import SiteHeader from "../components/SiteHeader";
 import SiteFooter from "../components/SiteFooter";
 
 /**
- * /gst-calculator — free GST calculator (add/remove GST, CGST/SGST/IGST).
+ * /gst-calculator: free GST calculator (add/remove GST, CGST/SGST/IGST).
  * Server Component with metadata + JSON-LD; the calculator is a client component.
  */
 
 export const metadata: Metadata = {
-  title: "GST Calculator — Free Online GST Calculator India | Paavti",
+  title: "Free GST Calculator Online (India) | Paavti",
   description:
     "Free online GST calculator. Add or remove GST instantly with automatic CGST, SGST and IGST split for 5%, 12%, 18% and 28% slabs. No signup needed.",
   keywords: [
@@ -34,7 +34,7 @@ export const metadata: Metadata = {
 const faqs = [
   {
     q: "How do I calculate GST on an amount?",
-    a: "To add GST, multiply the amount by the GST rate and add it to the amount — e.g. ₹10,000 at 18% GST = ₹1,800 GST, total ₹11,800. The calculator above does this instantly and splits it into CGST and SGST, or IGST for a different state.",
+    a: "To add GST, multiply the amount by the GST rate and add it to the amount. For example, ₹10,000 at 18% GST = ₹1,800 GST, total ₹11,800. The calculator above does this instantly and splits it into CGST and SGST, or IGST for a different state.",
   },
   {
     q: "What is a reverse GST calculation?",
@@ -90,7 +90,7 @@ export default function Page() {
             </h1>
             <p className="mx-auto mt-4 max-w-2xl text-lg text-slate-500">
               Add or remove GST in one tap, with an automatic CGST / SGST / IGST
-              split. Works for the 5%, 12%, 18% and 28% slabs — built for Indian
+              split. Works for the 5%, 12%, 18% and 28% slabs, built for Indian
               freelancers &amp; small businesses.
             </p>
           </div>
@@ -127,10 +127,10 @@ export default function Page() {
               usually taxed at 18%.
             </p>
             <ul className="mt-2 list-disc space-y-1 pl-6">
-              <li><b>5%</b> — essentials, small restaurants, transport</li>
-              <li><b>12%</b> — processed food, business-class travel, some electronics</li>
-              <li><b>18%</b> — most services, software, professional fees</li>
-              <li><b>28%</b> — luxury goods, cars, tobacco</li>
+              <li><b>5%</b>: essentials, small restaurants, transport</li>
+              <li><b>12%</b>: processed food, business-class travel, some electronics</li>
+              <li><b>18%</b>: most services, software, professional fees</li>
+              <li><b>28%</b>: luxury goods, cars, tobacco</li>
             </ul>
           </div>
         </section>
@@ -147,7 +147,7 @@ export default function Page() {
                   <summary className="flex cursor-pointer list-none items-center justify-between font-semibold">
                     {f.q}
                     <span className="text-xl text-[#2563eb] group-open:hidden">+</span>
-                    <span className="hidden text-xl text-[#2563eb] group-open:inline">–</span>
+                    <span className="hidden text-xl text-[#2563eb] group-open:inline">−</span>
                   </summary>
                   <p className="mt-2.5 text-slate-500">{f.a}</p>
                 </details>
@@ -162,7 +162,7 @@ export default function Page() {
             <h2 className="text-2xl font-bold">Need a GST invoice, not just the maths?</h2>
             <p className="mx-auto mt-2 max-w-xl opacity-90">
               Create a GST-compliant invoice with this tax auto-filled, a UPI QR
-              code and instant PDF — free.
+              code and instant PDF, free.
             </p>
             <a href="/gst-invoice-generator"
               className="mt-5 inline-block rounded-lg bg-white px-5 py-3 text-base font-semibold text-[#2563eb] hover:bg-slate-100">

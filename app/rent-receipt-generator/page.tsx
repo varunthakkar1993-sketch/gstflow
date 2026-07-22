@@ -4,14 +4,14 @@ import SiteHeader from "../components/SiteHeader";
 import SiteFooter from "../components/SiteFooter";
 
 /**
- * /rent-receipt-generator — free rent receipt generator for HRA claims.
+ * /rent-receipt-generator: free rent receipt generator for HRA claims.
  * Server Component (SEO + JSON-LD) wrapping a client-side tool.
  */
 
 export const metadata: Metadata = {
   title: "Free Rent Receipt Generator for HRA (Online) | Paavti",
   description:
-    "Generate rent receipts online free for your HRA claim — one receipt per month, with amount in words and landlord PAN. Download all months as a PDF. No signup.",
+    "Generate rent receipts online free for your HRA claim: one receipt per month, with amount in words and landlord PAN. Download all months as a PDF. No signup.",
   keywords: [
     "rent receipt generator",
     "rent receipt for hra",
@@ -34,7 +34,7 @@ export const metadata: Metadata = {
 const faqs = [
   {
     q: "How do I generate rent receipts for HRA?",
-    a: "Enter your name (the tenant), your landlord's name, the monthly rent, the rented address, and the period you need — for example April 2025 to March 2026. The tool creates one receipt per month and downloads them all as a single PDF, ready to submit for your HRA claim.",
+    a: "Enter your name (the tenant), your landlord's name, the monthly rent, the rented address, and the period you need, for example April 2025 to March 2026. The tool creates one receipt per month and downloads them all as a single PDF, ready to submit for your HRA claim.",
   },
   {
     q: "Is a landlord's PAN required on a rent receipt?",
@@ -46,7 +46,7 @@ const faqs = [
   },
   {
     q: "Is this rent receipt generator free?",
-    a: "Yes — you can generate and download rent receipts for free, with no signup and no watermark.",
+    a: "Yes, you can generate and download rent receipts for free, with no signup and no watermark.",
   },
 ];
 
@@ -90,7 +90,7 @@ export default function Page() {
             </h1>
             <p className="mx-auto mt-4 max-w-2xl text-lg text-slate-500">
               Generate a full year of rent receipts for your HRA claim in one
-              click — one receipt per month, with amount in words and landlord
+              click: one receipt per month, with amount in words and landlord
               PAN, downloaded as a single PDF.
             </p>
           </div>
@@ -111,7 +111,7 @@ export default function Page() {
               To claim House Rent Allowance (HRA) exemption, salaried employees
               usually need to submit rent receipts to their employer. Fill in the
               tenant and landlord details, the monthly rent and the period you
-              want, and the tool builds one receipt for every month — then hands
+              want, and the tool builds one receipt for every month, then hands
               you a single PDF to download and submit.
             </p>
             <ol className="mt-3 list-decimal space-y-1 pl-6">
@@ -129,7 +129,7 @@ export default function Page() {
               <li>The month the rent is for</li>
               <li>Address of the rented property</li>
               <li>Landlord name, signature and PAN (if annual rent &gt; ₹1,00,000)</li>
-              <li>Payment mode — and a revenue stamp for cash payments over ₹5,000</li>
+              <li>Payment mode, plus a revenue stamp for cash payments over ₹5,000</li>
             </ul>
           </div>
         </section>
@@ -146,7 +146,7 @@ export default function Page() {
                   <summary className="flex cursor-pointer list-none items-center justify-between font-semibold">
                     {f.q}
                     <span className="text-xl text-[#2563eb] group-open:hidden">+</span>
-                    <span className="hidden text-xl text-[#2563eb] group-open:inline">–</span>
+                    <span className="hidden text-xl text-[#2563eb] group-open:inline">−</span>
                   </summary>
                   <p className="mt-2.5 text-slate-500">{f.a}</p>
                 </details>
@@ -161,7 +161,7 @@ export default function Page() {
             <h2 className="text-2xl font-bold">Freelancer or business? Send GST invoices too</h2>
             <p className="mx-auto mt-2 max-w-xl opacity-90">
               Paavti also creates GST-compliant invoices with a UPI QR code and
-              instant PDF — free to start.
+              instant PDF, free to start.
             </p>
             <a href="/gst-invoice-generator"
               className="mt-5 inline-block rounded-lg bg-white px-5 py-3 text-base font-semibold text-[#2563eb] hover:bg-slate-100">

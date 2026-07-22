@@ -4,7 +4,7 @@ import { useMemo, useState } from "react";
 import posthog from "posthog-js";
 
 /**
- * Free Rent Receipt Generator — client-side only, no DB.
+ * Free Rent Receipt Generator (client-side only, no DB).
  * Generates one rent receipt per month across a chosen period (for HRA claims),
  * with amount in words and a multi-page PDF download.
  */
@@ -19,7 +19,7 @@ const inr = (n: number) =>
 const rs = (n: number) =>
   "Rs. " + n.toLocaleString("en-IN", { minimumFractionDigits: 0, maximumFractionDigits: 0 });
 
-// Amount in words, Indian system (handles up to ~99 crore — fine for rent).
+// Amount in words, Indian system (handles up to ~99 crore, fine for rent).
 function rupeesInWords(num: number): string {
   num = Math.round(num);
   if (num === 0) return "Zero";
@@ -205,7 +205,7 @@ export default function RentReceiptGenerator() {
         </div>
         <p className="mt-3 rounded-lg border border-[#e0eaff] bg-[#eff4ff] px-3 py-2 text-[12.5px] text-[#1d4ed8]">
           Generates <b>{months.length} receipt{months.length === 1 ? "" : "s"}</b>
-          {first ? ` (${first.label} – ${months[months.length - 1].label})` : ""}, one per month —
+          {first ? ` (${first.label} to ${months[months.length - 1].label})` : ""}, one per month,
           exactly what you need for an HRA claim.
         </p>
       </div>
@@ -218,18 +218,18 @@ export default function RentReceiptGenerator() {
           </div>
           <div className="px-6 py-5 text-[13.5px] text-slate-700">
             <div className="mb-3 flex justify-between text-slate-500">
-              <span>Receipt for: <b className="text-slate-800">{first ? first.label : "—"}</b></span>
+              <span>Receipt for: <b className="text-slate-800">{first ? first.label : "-"}</b></span>
               <span>{first ? `${first.monthName.slice(0, 3)} ${first.year}` : ""}</span>
             </div>
-            <Line k="Received from" v={tenant || "—"} />
+            <Line k="Received from" v={tenant || "-"} />
             <Line k="Amount" v={`${inr(rent)}`} />
             <div className="mb-2 text-[12.5px] italic text-slate-500">Rupees {words} only</div>
-            <Line k="Towards" v={`Rent for ${first ? first.label : "—"}`} />
-            <Line k="Property" v={address || "—"} />
+            <Line k="Towards" v={`Rent for ${first ? first.label : "-"}`} />
+            <Line k="Property" v={address || "-"} />
             <Line k="Paid by" v={mode} />
             <div className="mt-6 flex items-end justify-between">
               <div>
-                <div className="font-bold text-slate-800">{landlord || "—"}</div>
+                <div className="font-bold text-slate-800">{landlord || "-"}</div>
                 {pan ? <div className="text-[12px] text-slate-500">PAN: {pan}</div> : null}
               </div>
               <div className="text-center">

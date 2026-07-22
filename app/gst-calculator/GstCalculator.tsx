@@ -4,7 +4,7 @@ import { useMemo, useState } from "react";
 import posthog from "posthog-js";
 
 /**
- * Free GST Calculator — client-side only, no DB.
+ * Free GST Calculator (client-side only, no DB).
  * Add GST (exclusive) or Remove GST (extract from an inclusive amount),
  * with CGST/SGST or IGST split.
  */
