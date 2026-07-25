@@ -19,6 +19,7 @@ export interface ExpenseLike {
   category?: string;
   date?: string;
   vendor?: string;
+  isIntraState?: boolean; // true/undefined => CGST+SGST; false => IGST
 }
 
 export interface Gstr3bWarning { message: string; }
@@ -70,24 +71,30 @@ export function buildGstr3b(
   }
 
   // Eligible ITC from expenses (input GST embedded in the inclusive amount).
-  let itcTotal = 0;
+  // Head-split by each expense's intra/inter flag; expenses saved before the
+  // flag existed have isIntraState === undefined and default to CGST+SGST.
+  let itcIgst = 0, itcCgst = 0, itcSgst = 0;
   let hasInputGst = false;
+  let assumedCount = 0;
   for (const exp of expenses) {
     const rate = parseFloat(String(exp.gstRate)) || 0;
     if (rate <= 0) continue;
     hasInputGst = true;
     const amt = Number(exp.amount) || 0;
-    itcTotal += round2(amt * rate / (100 + rate));
+    const input = round2(amt * rate / (100 + rate));
+    if (exp.isIntraState === false) {
+      itcIgst = round2(itcIgst + input);
+    } else {
+      const half = round2(input / 2);
+      itcCgst = round2(itcCgst + half);
+      itcSgst = round2(itcSgst + (input - half));
+      if (exp.isIntraState === undefined) assumedCount++;
+    }
   }
-  itcTotal = round2(itcTotal);
+  const itcTotal = round2(itcIgst + itcCgst + itcSgst);
 
-  // Default head split for ITC (no intra/inter data on expenses).
-  const itcCgst = round2(itcTotal / 2);
-  const itcSgst = round2(itcTotal - itcCgst); // keep the two halves summing exactly to total
-  const itcIgst = 0;
-
-  if (hasInputGst) {
-    warnings.push({ message: 'Eligible ITC is split as CGST + SGST (half each), assuming local/intra-state purchases. If you bought inter-state (IGST) this month, ask your CA to reclassify that portion.' });
+  if (assumedCount > 0) {
+    warnings.push({ message: `${assumedCount} older expense${assumedCount !== 1 ? 's' : ''} had no GST type saved, so ${assumedCount !== 1 ? 'their' : 'its'} input credit is assumed CGST + SGST. Re-save with the correct GST type for an exact split.` });
   }
   if (invoices.some(i => (parseFloat(String(i.gstRate)) || 0) === 0)) {
     warnings.push({ message: 'Invoices at 0% are reported as nil-rated / exempt outward supplies (table 3.1(c)), not taxable sales.' });
