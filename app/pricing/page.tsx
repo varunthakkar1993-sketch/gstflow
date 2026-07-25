@@ -53,14 +53,14 @@ export default function PricingPage() {
         description: `Pro ${billingType === 'lifetime' ? 'Lifetime' : billingType === 'yearly' ? 'Yearly' : 'Monthly'} Plan`,
         order_id: orderId,
         handler: async (response: any) => {
+          const idToken = await auth.currentUser?.getIdToken();
           const verify = await fetch('/api/razorpay-verify', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${idToken}` },
             body: JSON.stringify({
-              ...response,
-              userId: user.uid,
-              plan,
-              billing: billingType,
+              razorpay_order_id: response.razorpay_order_id,
+              razorpay_payment_id: response.razorpay_payment_id,
+              razorpay_signature: response.razorpay_signature,
             }),
           });
           const result = await verify.json();

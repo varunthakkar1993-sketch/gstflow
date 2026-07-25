@@ -55,9 +55,10 @@ export default function ExpensesPage() {
     if (!billPhotoBase64) { alert('Select a bill photo first.'); return; }
     setScanning(true);
     try {
+      const idToken = await auth.currentUser?.getIdToken();
       const res = await fetch('/api/scan-bill', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${idToken}` },
         body: JSON.stringify({ imageBase64: billPhotoBase64 }),
       });
       if (!res.ok) throw new Error('Scan failed');

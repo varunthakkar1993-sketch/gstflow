@@ -294,9 +294,10 @@ export default function InvoiceEditor() {
     if (!invoiceData.clientEmail) { alert('Please enter client email first.'); return; }
     setSending(true);
     try {
+      const idToken = await auth.currentUser?.getIdToken();
       const res = await fetch('/api/send-invoice', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${idToken}` },
         body: JSON.stringify({
           to: invoiceData.clientEmail,
           invoiceNumber: invoiceData.invoiceNumber,

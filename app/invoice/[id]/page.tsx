@@ -122,9 +122,10 @@ export default function InvoiceDetail() {
     setSending(true);
     const doc2 = await buildPDF();
     const base64 = doc2.output('datauristring').split(',')[1];
+    const idToken = await auth.currentUser?.getIdToken();
     const res = await fetch('/api/send-invoice', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${idToken}` },
       body: JSON.stringify({
         to: invoice.clientEmail,
         invoiceNumber: invoice.invoiceNumber,

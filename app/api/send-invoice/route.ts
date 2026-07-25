@@ -1,11 +1,22 @@
 import { NextRequest, NextResponse } from 'next/server';
 import sgMail from '@sendgrid/mail';
 import { getPostHogClient } from '@/lib/posthog-server';
+import { verifyAuth, rateLimit } from '@/lib/verify-auth';
 
 sgMail.setApiKey(process.env.SENDGRID_API_KEY!);
 
 export async function POST(req: NextRequest) {
   try {
+    let uid: string;
+    try {
+      uid = await verifyAuth(req);
+    } catch {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+    if (!rateLimit(`send:${uid}`, 30, 60_000)) {
+      return NextResponse.json({ error: 'Too many requests. Please wait a minute.' }, { status: 429 });
+    }
+
     const { to, subject, invoiceNumber, clientName, businessName, total, date, pdfBase64, docType } = await req.json();
 
     const type = docType || 'invoice';

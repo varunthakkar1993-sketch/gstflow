@@ -1,7 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { verifyAuth, rateLimit } from '@/lib/verify-auth';
 
 export async function POST(req: NextRequest) {
   try {
+    let uid: string;
+    try {
+      uid = await verifyAuth(req);
+    } catch {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+    if (!rateLimit(`scan:${uid}`, 20, 60_000)) {
+      return NextResponse.json({ error: 'Too many requests. Please wait a minute.' }, { status: 429 });
+    }
+
     const { imageBase64 } = await req.json();
     if (!imageBase64) {
       return NextResponse.json({ error: 'No image provided' }, { status: 400 });

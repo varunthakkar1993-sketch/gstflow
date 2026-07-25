@@ -1,8 +1,10 @@
 import crypto from 'crypto';
+import Razorpay from 'razorpay';
 import { NextRequest, NextResponse } from 'next/server';
 import * as admin from 'firebase-admin';
 import sgMail from '@sendgrid/mail';
 import { getPostHogClient } from '@/lib/posthog-server';
+import { verifyAuth } from '@/lib/verify-auth';
 
 sgMail.setApiKey(process.env.SENDGRID_API_KEY!);
 
@@ -19,10 +21,18 @@ const db = admin.firestore();
 
 export async function POST(req: NextRequest) {
   try {
-    const { razorpay_order_id, razorpay_payment_id, razorpay_signature, userId, plan, billing } = await req.json();
+    // Authenticate the caller from their Firebase ID token, not the request body.
+    let userId: string;
+    try {
+      userId = await verifyAuth(req);
+    } catch {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
 
-    if (!userId) {
-      return NextResponse.json({ error: 'User not authenticated' }, { status: 401 });
+    const { razorpay_order_id, razorpay_payment_id, razorpay_signature } = await req.json();
+
+    if (!razorpay_order_id || !razorpay_payment_id || !razorpay_signature) {
+      return NextResponse.json({ error: 'Missing payment details' }, { status: 400 });
     }
 
     const body = razorpay_order_id + '|' + razorpay_payment_id;
@@ -35,9 +45,26 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Invalid signature' }, { status: 400 });
     }
 
+    // Derive plan/billing/amount from the ACTUAL order on Razorpay, never from
+    // the client, so a cheap order cannot be redeemed as a more expensive plan.
+    const razorpay = new Razorpay({
+      key_id: process.env.RAZORPAY_KEY_ID!,
+      key_secret: process.env.RAZORPAY_KEY_SECRET!,
+    });
+    const order = await razorpay.orders.fetch(razorpay_order_id);
+
+    // Confirm the order was actually paid.
+    if (order.status !== 'paid') {
+      return NextResponse.json({ error: 'Order not paid' }, { status: 400 });
+    }
+
+    const plan = (order.notes?.plan as string) || 'pro';
+    const billing = (order.notes?.billing as string) || 'monthly';
+
     await db.collection('subscriptions').doc(userId).set({
       plan,
       billing,
+      amountPaid: order.amount,
       paymentId: razorpay_payment_id,
       orderId: razorpay_order_id,
       activatedAt: new Date().toISOString(),
