@@ -1,0 +1,1466 @@
+diff --git a/app/clients/page.tsx b/app/clients/page.tsx
+index d6f7f09..68069ad 100644
+--- a/app/clients/page.tsx
++++ b/app/clients/page.tsx
+@@ -270,6 +270,7 @@ export default function ClientsPage() {
+             <a href="/quote-editor" className="nav-item"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="9" y1="13" x2="15" y2="13"/></svg>New Quote</a>
+             <a href="/receipt-editor" className="nav-item"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>New Receipt</a>
+             <a href="/reports" className="nav-item"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="9" y1="13" x2="15" y2="13"/><line x1="9" y1="17" x2="15" y2="17"/></svg>Reports</a>
++            <a href="/gstr1" className="nav-item"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>GST Filing</a>
+             <div className="nav-label">Documents</div>
+             <a href="/dashboard" className="nav-item"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>Invoices</a>
+             <a href="/quotes" className="nav-item"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>Quotes</a>
+diff --git a/app/dashboard/page.tsx b/app/dashboard/page.tsx
+index 587f5aa..47ea2b7 100644
+--- a/app/dashboard/page.tsx
++++ b/app/dashboard/page.tsx
+@@ -76,6 +76,7 @@ export default function Dashboard() {
+     return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
+   });
+   const thisMonthRevenue = thisMonth.reduce((sum, inv) => sum + (inv.total || 0), 0);
++  const thisMonthGST = thisMonth.reduce((sum, inv) => sum + (inv.amount || 0) * (parseFloat(inv.gstRate) || 0) / 100, 0);
+   const thisMonthInvoiceCount = thisMonth.length;
+   const freeLimit = 5;
+   const atLimit = !isPro && thisMonthInvoiceCount >= freeLimit;
+@@ -221,7 +222,7 @@ export default function Dashboard() {
+         .status-badge { display: inline-flex; align-items: center; gap: 5px; padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: 500; cursor: pointer; border: none; transition: opacity 0.15s; }
+         .status-badge:hover { opacity: 0.8; }
+         .status-hint { font-size: 11px; color: #9ca3af; margin-top: 3px; }
+-        .quick-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 32px; }
++        .quick-actions { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-bottom: 32px; }
+         .action-card { background: #fff; border: 1px solid #e5e9f5; border-radius: 12px; padding: 20px 24px; display: flex; align-items: center; gap: 16px; text-decoration: none; transition: all 0.15s; cursor: pointer; }
+         .action-card:hover { border-color: #2563eb; box-shadow: 0 0 0 3px rgba(37,99,235,0.08); }
+         .action-icon { width: 42px; height: 42px; border-radius: 10px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+@@ -299,6 +300,7 @@ export default function Dashboard() {
+             <a href="/quote-editor" className="nav-item"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="9" y1="13" x2="15" y2="13"/></svg>New Quote</a>
+             <a href="/receipt-editor" className="nav-item"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>New Receipt</a>
+             <a href="/reports" className="nav-item"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="9" y1="13" x2="15" y2="13"/><line x1="9" y1="17" x2="15" y2="17"/></svg>Reports</a>
++            <a href="/gstr1" className="nav-item"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>GST Filing</a>
+             <div className="nav-label">Documents</div>
+             <a href="/dashboard" className="nav-item"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>Invoices</a>
+             <a href="/quotes" className="nav-item"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>Quotes</a>
+@@ -389,6 +391,15 @@ export default function Dashboard() {
+                 <div className="action-sub">{atLimit ? '⚠ Limit reached — upgrade to continue' : 'Generate a GST-compliant invoice'}</div>
+               </div>
+             </div>
++            <a href="/gstr1" className="action-card">
++              <div className="action-icon" style={{ background: '#ecfdf5' }}>
++                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#16a34a" strokeWidth="2"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
++              </div>
++              <div>
++                <div className="action-title">GST Filing</div>
++                <div className="action-sub">{thisMonthGST > 0 ? `Rs. ${Math.round(thisMonthGST).toLocaleString('en-IN')} output tax this month` : 'GSTR-1 & GSTR-3B ready to export'}</div>
++              </div>
++            </a>
+             <a href="/profile" className="action-card">
+               <div className="action-icon" style={{ background: '#f5f3ff' }}>
+                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#7c3aed" strokeWidth="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+diff --git a/app/editor/page.tsx b/app/editor/page.tsx
+index 962f9cd..9cceb50 100644
+--- a/app/editor/page.tsx
++++ b/app/editor/page.tsx
+@@ -28,6 +28,8 @@ export default function InvoiceEditor() {
+     amount: '',
+     isIntraState: 'true',
+     gstRate: '18',
++    hsn: '',
++    unit: 'OTH',
+   });
+ 
+   useEffect(() => {
+@@ -52,6 +54,8 @@ export default function InvoiceEditor() {
+         amount: '',
+         isIntraState: 'true',
+         gstRate: '18',
++        hsn: '',
++        unit: 'OTH',
+       });
+     });
+   }, []);
+@@ -263,6 +267,8 @@ export default function InvoiceEditor() {
+         gstRate: invoiceData.gstRate,
+         isIntraState: isIntra,
+         total: total,
++        hsn: invoiceData.hsn || '',
++        unit: invoiceData.unit || 'OTH',
+         createdAt: serverTimestamp(),
+       });
+       posthog.capture('invoice_generated', {
+@@ -442,6 +448,7 @@ export default function InvoiceEditor() {
+             <a href="/quote-editor" className="nav-item"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="9" y1="13" x2="15" y2="13"/></svg>New Quote</a>
+             <a href="/receipt-editor" className="nav-item"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>New Receipt</a>
+             <a href="/reports" className="nav-item"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="9" y1="13" x2="15" y2="13"/><line x1="9" y1="17" x2="15" y2="17"/></svg>Reports</a>
++            <a href="/gstr1" className="nav-item"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>GST Filing</a>
+             <div className="nav-label">Documents</div>
+             <a href="/dashboard" className="nav-item"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>Invoices</a>
+             <a href="/quotes" className="nav-item"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>Quotes</a>
+@@ -541,6 +548,26 @@ export default function InvoiceEditor() {
+                       <textarea name="description" value={invoiceData.description} onChange={handleChange} />
+                     </div>
+                   </div>
++                  <div className="form-row">
++                    <div className="field">
++                      <label>HSN / SAC Code</label>
++                      <input name="hsn" value={invoiceData.hsn} onChange={handleChange} placeholder="e.g. 9983 (services) or 6109 (goods)" />
++                    </div>
++                    <div className="field">
++                      <label>Unit (UQC)</label>
++                      <select name="unit" value={invoiceData.unit} onChange={handleChange}>
++                        <option value="OTH">OTH — Others / Services</option>
++                        <option value="NOS">NOS — Numbers</option>
++                        <option value="PCS">PCS — Pieces</option>
++                        <option value="KGS">KGS — Kilograms</option>
++                        <option value="MTR">MTR — Metres</option>
++                        <option value="BOX">BOX — Box</option>
++                        <option value="SET">SET — Set</option>
++                        <option value="LTR">LTR — Litre</option>
++                        <option value="HRS">HRS — Hours</option>
++                      </select>
++                    </div>
++                  </div>
+                   <div className="form-row">
+                     <div className="field">
+                       <label>Subtotal (Rs.)</label>
+diff --git a/app/expenses/page.tsx b/app/expenses/page.tsx
+index bb00fea..0f6387d 100644
+--- a/app/expenses/page.tsx
++++ b/app/expenses/page.tsx
+@@ -344,6 +344,7 @@ export default function ExpensesPage() {
+             <a href="/quote-editor" className="nav-item"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="9" y1="13" x2="15" y2="13"/></svg>New Quote</a>
+             <a href="/receipt-editor" className="nav-item"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>New Receipt</a>
+             <a href="/reports" className="nav-item"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="9" y1="13" x2="15" y2="13"/><line x1="9" y1="17" x2="15" y2="17"/></svg>Reports</a>
++            <a href="/gstr1" className="nav-item"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>GST Filing</a>
+             <div className="nav-label">Documents</div>
+             <a href="/dashboard" className="nav-item"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>Invoices</a>
+             <a href="/quotes" className="nav-item"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>Quotes</a>
+diff --git a/app/gstr1/page.tsx b/app/gstr1/page.tsx
+new file mode 100644
+index 0000000..346a600
+--- /dev/null
++++ b/app/gstr1/page.tsx
+@@ -0,0 +1,382 @@
++'use client';
++
++import { useEffect, useState } from 'react';
++import { onAuthStateChanged } from 'firebase/auth';
++import { auth, db } from '../../lib/firebase';
++import { collection, query, where, getDocs, doc, getDoc } from 'firebase/firestore';
++import posthog from 'posthog-js';
++import { buildGstr1, Gstr1Result } from '../../lib/gstr1';
++
++const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
++
++export default function Gstr1Page() {
++  const [user, setUser] = useState<any>(null);
++  const [showMenu, setShowMenu] = useState(false);
++  const [profile, setProfile] = useState<any>(null);
++  const [month, setMonth] = useState(new Date().getMonth());
++  const [year, setYear] = useState(new Date().getFullYear());
++  const [loading, setLoading] = useState(false);
++  const [fetched, setFetched] = useState(false);
++  const [result, setResult] = useState<Gstr1Result | null>(null);
++
++  useEffect(() => {
++    onAuthStateChanged(auth, async (currentUser) => {
++      if (!currentUser) { window.location.href = '/login'; return; }
++      setUser(currentUser);
++      const profileSnap = await getDoc(doc(db, 'profiles', currentUser.uid));
++      if (profileSnap.exists()) setProfile(profileSnap.data());
++    });
++  }, []);
++
++  const fetchData = async () => {
++    if (!user) return;
++    setLoading(true);
++    try {
++      const iq = query(collection(db, 'invoices'), where('userId', '==', user.uid));
++      const isnap = await getDocs(iq);
++      const monthInvoices = isnap.docs
++        .map(d => ({ id: d.id, ...d.data() } as any))
++        .filter((inv: any) => {
++          if (!inv.date) return false;
++          const dt = new Date(inv.date);
++          return dt.getMonth() === month && dt.getFullYear() === year;
++        })
++        .sort((a: any, b: any) => (a.date || '').localeCompare(b.date || ''));
++
++      const pSnap = await getDoc(doc(db, 'profiles', user.uid));
++      const prof = pSnap.exists() ? pSnap.data() : (profile || {});
++      const r = buildGstr1(monthInvoices, prof as any, month, year);
++      setResult(r);
++      setFetched(true);
++      posthog.capture('gstr1_previewed', {
++        month: MONTHS[month], year, b2b: r.b2b.length, b2cl: r.b2cl.length,
++        b2cs: r.b2cs.length, invoices: r.totals.count,
++      });
++    } catch (err) {
++      console.error(err);
++      alert('Failed to load invoices.');
++    } finally {
++      setLoading(false);
++    }
++  };
++
++  const downloadJSON = () => {
++    if (!result) return;
++    const blob = new Blob([JSON.stringify(result.json, null, 2)], { type: 'application/json' });
++    const url = URL.createObjectURL(blob);
++    const a = document.createElement('a');
++    a.href = url;
++    a.download = `GSTR1-${result.fp}.json`;
++    a.click();
++    URL.revokeObjectURL(url);
++    posthog.capture('gstr1_json_downloaded', { fp: result.fp });
++  };
++
++  const downloadExcel = async () => {
++    if (!result) return;
++    const XLSX = await import('xlsx');
++    const wb = XLSX.utils.book_new();
++
++    const summary = [
++      ['GSTR-1 Summary'],
++      ['Business', profile?.businessName || ''],
++      ['GSTIN', result.gstin],
++      ['Return Period', result.period, `(${result.fp})`],
++      [],
++      ['Section', 'Records', 'Taxable Value', 'IGST', 'CGST', 'SGST'],
++      ['B2B', result.b2b.length, sum(result.b2b, 'txval'), sum(result.b2b, 'iamt'), sum(result.b2b, 'camt'), sum(result.b2b, 'samt')],
++      ['B2CL', result.b2cl.length, sum(result.b2cl, 'txval'), sum(result.b2cl, 'iamt'), 0, 0],
++      ['B2CS', result.b2cs.length, sum(result.b2cs, 'txval'), sum(result.b2cs, 'iamt'), sum(result.b2cs, 'camt'), sum(result.b2cs, 'samt')],
++      [],
++      ['TOTAL', result.totals.count, result.totals.taxable, result.totals.igst, result.totals.cgst, result.totals.sgst],
++      ['Total Invoice Value', '', result.totals.invoiceValue],
++    ];
++    XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(summary), 'Summary');
++
++    const b2b = [['GSTIN/UIN of Recipient','Receiver Name','Invoice Number','Invoice Date','Invoice Value','Place Of Supply','Reverse Charge','Invoice Type','Rate','Taxable Value','IGST','CGST','SGST']];
++    result.b2b.forEach(r => b2b.push([r.ctin, r.clientName, r.inum, r.idt, r.val, r.posLabel, r.rchrg, r.inv_typ, r.rate, r.txval, r.iamt, r.camt, r.samt] as any));
++    XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(b2b), 'B2B');
++
++    const b2cl = [['Invoice Number','Invoice Date','Invoice Value','Place Of Supply','Rate','Taxable Value','IGST','Receiver Name']];
++    result.b2cl.forEach(r => b2cl.push([r.inum, r.idt, r.val, r.posLabel, r.rate, r.txval, r.iamt, r.clientName] as any));
++    XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(b2cl), 'B2CL');
++
++    const b2cs = [['Type','Place Of Supply','Rate','Taxable Value','IGST','CGST','SGST']];
++    result.b2cs.forEach(r => b2cs.push([r.sply_ty, r.posLabel, r.rate, r.txval, r.iamt, r.camt, r.samt] as any));
++    XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(b2cs), 'B2CS');
++
++    const hsn = [['HSN/SAC','Description','UQC','Total Quantity','Rate','Total Value','Taxable Value','IGST','CGST','SGST']];
++    result.hsn.forEach(r => hsn.push([r.hsn_sc, r.desc, r.uqc, r.qty, r.rate, r.total, r.txval, r.iamt, r.camt, r.samt] as any));
++    XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(hsn), 'HSN');
++
++    if (result.warnings.length) {
++      const warn = [['Invoice','Note']];
++      result.warnings.forEach(w => warn.push([w.invoiceNumber, w.message]));
++      XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(warn), 'Check');
++    }
++
++    XLSX.writeFile(wb, `GSTR1-${result.fp}.xlsx`);
++    posthog.capture('gstr1_excel_downloaded', { fp: result.fp });
++  };
++
++  return (
++    <>
++      <style>{`
++        @import url('https://fonts.googleapis.com/css2?family=Lora:wght@400;500;600&family=DM+Sans:wght@300;400;500;600&display=swap');
++        * { box-sizing: border-box; margin: 0; padding: 0; }
++        body { background: #f0f4ff; }
++        .editor-root { display: flex; min-height: 100vh; font-family: 'DM Sans', sans-serif; }
++        .sidebar { width: 240px; background: #0f1f5c; min-height: 100vh; display: flex; flex-direction: column; position: fixed; left: 0; top: 0; bottom: 0; z-index: 10; }
++        .sidebar-logo { padding: 28px 24px 24px; border-bottom: 1px solid rgba(255,255,255,0.08); }
++        .sidebar-logo h1 { font-family: 'Lora', serif; font-size: 22px; color: #fff; font-weight: 600; }
++        .sidebar-logo p { font-size: 11px; color: rgba(255,255,255,0.4); margin-top: 2px; letter-spacing: 0.5px; text-transform: uppercase; }
++        .sidebar-nav { padding: 20px 12px; flex: 1; }
++        .nav-label { font-size: 10px; color: rgba(255,255,255,0.3); letter-spacing: 1px; text-transform: uppercase; padding: 0 12px; margin-bottom: 8px; margin-top: 16px; }
++        .nav-item { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 8px; color: rgba(255,255,255,0.6); font-size: 13.5px; text-decoration: none; transition: all 0.15s; }
++        .nav-item:hover { background: rgba(255,255,255,0.08); color: #fff; }
++        .nav-item.active { background: rgba(99,130,255,0.2); color: #fff; font-weight: 500; }
++        .sidebar-footer { padding: 16px 12px; border-top: 1px solid rgba(255,255,255,0.08); }
++        .user-chip { display: flex; align-items: center; gap: 10px; padding: 8px 12px; }
++        .user-avatar { width: 32px; height: 32px; background: linear-gradient(135deg, #6382ff, #3b5bdb); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #fff; font-size: 13px; font-weight: 600; flex-shrink: 0; }
++        .user-email { font-size: 11.5px; color: rgba(255,255,255,0.5); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
++        .main { margin-left: 240px; flex: 1; padding: 36px 40px; }
++        .page-header { margin-bottom: 28px; }
++        .page-header h2 { font-family: 'Lora', serif; font-size: 26px; color: #0f1f5c; font-weight: 600; }
++        .page-header p { color: #6b7280; font-size: 14px; margin-top: 4px; }
++        .tabs { display: flex; gap: 8px; margin-bottom: 24px; border-bottom: 1.5px solid #e5e9f5; }
++        .tab { padding: 10px 18px; font-size: 14px; font-weight: 600; color: #6b7280; text-decoration: none; border-bottom: 2px solid transparent; margin-bottom: -1.5px; }
++        .tab.active { color: #2563eb; border-bottom-color: #2563eb; }
++        .tab:hover { color: #2563eb; }
++        .controls { display: flex; align-items: center; gap: 12px; margin-bottom: 28px; flex-wrap: wrap; }
++        .controls select { padding: 10px 14px; border: 1.5px solid #e5e9f5; border-radius: 8px; font-size: 14px; font-family: 'DM Sans', sans-serif; color: #111827; background: #fff; outline: none; transition: border-color 0.15s; }
++        .controls select:focus { border-color: #2563eb; box-shadow: 0 0 0 3px rgba(37,99,235,0.08); }
++        .btn-fetch { background: #2563eb; color: #fff; border: none; padding: 10px 24px; border-radius: 8px; font-size: 14px; font-weight: 600; font-family: 'DM Sans', sans-serif; cursor: pointer; transition: background 0.15s; }
++        .btn-fetch:hover { background: #1d4ed8; }
++        .btn-fetch:disabled { opacity: 0.6; cursor: not-allowed; }
++        .dl-row { display: flex; gap: 12px; flex-wrap: wrap; }
++        .btn-download { background: #0f1f5c; color: #fff; border: none; padding: 13px 28px; border-radius: 9px; font-size: 14px; font-weight: 600; font-family: 'DM Sans', sans-serif; cursor: pointer; transition: background 0.15s; display: flex; align-items: center; gap: 8px; }
++        .btn-download:hover { background: #1a2f7a; }
++        .btn-download.alt { background: #fff; color: #0f1f5c; border: 1.5px solid #0f1f5c; }
++        .btn-download.alt:hover { background: #f0f4ff; }
++        .summary-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 24px; }
++        .summary-box { background: #fff; border: 1px solid #e5e9f5; border-radius: 12px; padding: 20px; }
++        .summary-box-label { font-size: 11px; color: #6b7280; text-transform: uppercase; letter-spacing: 0.5px; font-weight: 600; margin-bottom: 8px; }
++        .summary-box-value { font-family: 'Lora', serif; font-size: 22px; font-weight: 600; color: #0f1f5c; }
++        .card { background: #fff; border-radius: 12px; border: 1px solid #e5e9f5; overflow: hidden; margin-bottom: 20px; }
++        .card-header { padding: 16px 24px; border-bottom: 1px solid #f0f4ff; display: flex; align-items: center; justify-content: space-between; }
++        .card-header h3 { font-size: 14px; font-weight: 600; color: #0f1f5c; }
++        .card-header span { font-size: 12px; color: #9ca3af; }
++        .table-wrap { overflow-x: auto; }
++        table { width: 100%; border-collapse: collapse; }
++        th { font-size: 11px; color: #6b7280; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; padding: 10px 16px; text-align: left; background: #f8faff; border-bottom: 1px solid #f0f4ff; white-space: nowrap; }
++        td { font-size: 13px; color: #374151; padding: 12px 16px; border-bottom: 1px solid #f8faff; white-space: nowrap; }
++        .num { text-align: right; }
++        .empty-row { text-align: center; color: #9ca3af; font-size: 13px; padding: 20px; }
++        .no-data { text-align: center; padding: 60px 20px; color: #9ca3af; font-size: 15px; }
++        .warn-box { background: #fffbeb; border: 1px solid #fde68a; border-radius: 12px; padding: 16px 20px; margin-bottom: 20px; }
++        .warn-box h4 { font-size: 13px; color: #92400e; font-weight: 600; margin-bottom: 8px; }
++        .warn-box ul { margin: 0; padding-left: 18px; }
++        .warn-box li { font-size: 12.5px; color: #92400e; margin-bottom: 4px; }
++        .info-strip { background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 10px; padding: 12px 16px; margin-bottom: 24px; font-size: 12.5px; color: #1e40af; }
++        .menu-toggle { display: none; background: none; border: none; color: #ffffff; font-size: 30px; cursor: pointer; padding: 4px 8px; }
++        @media (max-width: 768px) {
++          .editor-root { flex-direction: column; }
++          .sidebar { width: 100% !important; min-height: auto !important; position: relative !important; flex-direction: row !important; flex-wrap: wrap !important; align-items: center; top: auto !important; bottom: auto !important; left: auto !important; height: auto !important; z-index: auto !important; }
++          .sidebar-logo { display: flex !important; align-items: center; width: 100%; gap: 12px; padding: 12px 16px !important; border-bottom: none; }
++          .sidebar-logo p { display: none; }
++          .sidebar-logo img { height: 42px !important; }
++          .menu-toggle { display: block !important; margin-left: auto; font-size: 32px; color: #ffffff !important; }
++          .sidebar-nav { display: none !important; flex-direction: column; padding: 0 12px 12px; gap: 2px; width: 100%; }
++          .sidebar-nav.nav-open { display: flex !important; }
++          .nav-label { display: none; }
++          .nav-item { padding: 12px 14px; font-size: 15px; white-space: nowrap; gap: 10px; }
++          .sidebar-footer { display: none; }
++          .main { margin-left: 0 !important; padding: 16px !important; width: 100% !important; }
++          .page-header h2 { font-size: 22px; }
++          .summary-grid { grid-template-columns: repeat(2, 1fr); gap: 10px; }
++          .controls { flex-direction: column; align-items: stretch; }
++          .controls select, .controls button { width: 100%; }
++          .dl-row { flex-direction: column; }
++          .dl-row button { width: 100%; justify-content: center; }
++          table { font-size: 12px; }
++          th { font-size: 10px; padding: 8px 10px; }
++          td { font-size: 12.5px; padding: 10px; }
++        }
++      `}</style>
++
++      <div className="editor-root">
++        <aside className="sidebar">
++          <div className="sidebar-logo">
++            <img src="/logo-white.svg" alt="Paavti" style={{ height: '38px' }} />
++            <p>Business Manager</p>
++            <button className="menu-toggle" onClick={() => setShowMenu(!showMenu)}>&#9776;</button>
++          </div>
++          <nav className={`sidebar-nav ${showMenu ? 'nav-open' : ''}`}>
++            <div className="nav-label">Main</div>
++            <a href="/dashboard" className="nav-item"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>Dashboard</a>
++            <a href="/editor" className="nav-item"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/></svg>New Invoice</a>
++            <a href="/quote-editor" className="nav-item"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="9" y1="13" x2="15" y2="13"/></svg>New Quote</a>
++            <a href="/receipt-editor" className="nav-item"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>New Receipt</a>
++            <a href="/reports" className="nav-item"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="9" y1="13" x2="15" y2="13"/><line x1="9" y1="17" x2="15" y2="17"/></svg>Reports</a>
++            <a href="/gstr1" className="nav-item active"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>GST Filing</a>
++            <div className="nav-label">Documents</div>
++            <a href="/dashboard" className="nav-item"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>Invoices</a>
++            <a href="/quotes" className="nav-item"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>Quotes</a>
++            <a href="/expenses" className="nav-item"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>Expenses</a>
++            <a href="/clients" className="nav-item"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>Clients</a>
++            <div className="nav-label">Settings</div>
++            <a href="/profile" className="nav-item"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>Business Profile</a>
++            <a href="/templates" className="nav-item"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg>Templates</a>
++          </nav>
++          <div className="sidebar-footer">
++            <div className="user-chip">
++              <div className="user-avatar">{user?.email?.[0]?.toUpperCase()}</div>
++              <div className="user-email">{user?.email}</div>
++            </div>
++          </div>
++        </aside>
++
++        <main className="main">
++          <div className="page-header">
++            <h2>GST Filing</h2>
++            <p>Export your outward supplies in GSTR-1 format. Upload the JSON to the GST portal or hand the Excel to your CA.</p>
++          </div>
++
++          <div className="tabs">
++            <a href="/gstr1" className="tab active">GSTR-1 (Sales)</a>
++            <a href="/gstr3b" className="tab">GSTR-3B (Summary)</a>
++          </div>
++
++          <div className="info-strip">
++            GSTR-1 covers your sales. Records are split into B2B (registered buyers), B2CL (inter-state consumer sales above Rs 1 lakh) and B2CS (all other consumer sales), plus an HSN summary.
++          </div>
++
++          <div className="controls">
++            <select value={month} onChange={e => { setMonth(parseInt(e.target.value)); setFetched(false); }}>
++              {MONTHS.map((m, i) => <option key={i} value={i}>{m}</option>)}
++            </select>
++            <select value={year} onChange={e => { setYear(parseInt(e.target.value)); setFetched(false); }}>
++              {[2024, 2025, 2026, 2027].map(y => <option key={y} value={y}>{y}</option>)}
++            </select>
++            <button className="btn-fetch" onClick={fetchData} disabled={loading}>
++              {loading ? 'Loading...' : 'Prepare GSTR-1'}
++            </button>
++          </div>
++
++          {!fetched || !result ? (
++            <div className="no-data">Select a return period and click Prepare GSTR-1.</div>
++          ) : result.totals.count === 0 ? (
++            <div className="no-data">No invoices found for {result.period}.</div>
++          ) : (
++            <>
++              <div className="dl-row" style={{ marginBottom: 24 }}>
++                <button className="btn-download" onClick={downloadJSON}>
++                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
++                  Download JSON (portal)
++                </button>
++                <button className="btn-download alt" onClick={downloadExcel}>
++                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
++                  Download Excel (CA)
++                </button>
++              </div>
++
++              <div className="summary-grid">
++                <div className="summary-box">
++                  <div className="summary-box-label">Taxable Value</div>
++                  <div className="summary-box-value">Rs. {result.totals.taxable.toLocaleString('en-IN')}</div>
++                </div>
++                <div className="summary-box">
++                  <div className="summary-box-label">Total IGST</div>
++                  <div className="summary-box-value">Rs. {result.totals.igst.toLocaleString('en-IN')}</div>
++                </div>
++                <div className="summary-box">
++                  <div className="summary-box-label">CGST + SGST</div>
++                  <div className="summary-box-value">Rs. {(result.totals.cgst + result.totals.sgst).toLocaleString('en-IN')}</div>
++                </div>
++                <div className="summary-box">
++                  <div className="summary-box-label">Invoices</div>
++                  <div className="summary-box-value">{result.totals.count}</div>
++                </div>
++              </div>
++
++              {result.warnings.length > 0 && (
++                <div className="warn-box">
++                  <h4>Please review before filing ({result.warnings.length})</h4>
++                  <ul>
++                    {result.warnings.slice(0, 12).map((w, i) => (
++                      <li key={i}><strong>{w.invoiceNumber !== '-' ? `${w.invoiceNumber}: ` : ''}</strong>{w.message}</li>
++                    ))}
++                    {result.warnings.length > 12 && <li>...and {result.warnings.length - 12} more (see the Check sheet in the Excel).</li>}
++                  </ul>
++                </div>
++              )}
++
++              <div className="card">
++                <div className="card-header"><h3>B2B — Registered Buyers</h3><span>{result.b2b.length} record{result.b2b.length !== 1 ? 's' : ''}</span></div>
++                <div className="table-wrap">
++                  <table>
++                    <thead><tr><th>GSTIN</th><th>Buyer</th><th>Invoice</th><th>Date</th><th>POS</th><th>Rate</th><th className="num">Taxable</th><th className="num">IGST</th><th className="num">CGST</th><th className="num">SGST</th></tr></thead>
++                    <tbody>
++                      {result.b2b.length === 0 ? <tr><td colSpan={10} className="empty-row">None</td></tr> :
++                        result.b2b.map((r, i) => (
++                          <tr key={i}><td>{r.ctin}</td><td>{r.clientName || '—'}</td><td style={{ color: '#2563eb', fontWeight: 500 }}>{r.inum}</td><td>{r.idt}</td><td>{r.pos}</td><td>{r.rate}%</td><td className="num">{r.txval.toLocaleString('en-IN')}</td><td className="num">{r.iamt.toLocaleString('en-IN')}</td><td className="num">{r.camt.toLocaleString('en-IN')}</td><td className="num">{r.samt.toLocaleString('en-IN')}</td></tr>
++                        ))}
++                    </tbody>
++                  </table>
++                </div>
++              </div>
++
++              <div className="card">
++                <div className="card-header"><h3>B2CL — Large Consumer Sales</h3><span>{result.b2cl.length} record{result.b2cl.length !== 1 ? 's' : ''}</span></div>
++                <div className="table-wrap">
++                  <table>
++                    <thead><tr><th>Invoice</th><th>Date</th><th>POS</th><th>Rate</th><th className="num">Invoice Value</th><th className="num">Taxable</th><th className="num">IGST</th></tr></thead>
++                    <tbody>
++                      {result.b2cl.length === 0 ? <tr><td colSpan={7} className="empty-row">None</td></tr> :
++                        result.b2cl.map((r, i) => (
++                          <tr key={i}><td style={{ color: '#2563eb', fontWeight: 500 }}>{r.inum}</td><td>{r.idt}</td><td>{r.pos}</td><td>{r.rate}%</td><td className="num">{r.val.toLocaleString('en-IN')}</td><td className="num">{r.txval.toLocaleString('en-IN')}</td><td className="num">{r.iamt.toLocaleString('en-IN')}</td></tr>
++                        ))}
++                    </tbody>
++                  </table>
++                </div>
++              </div>
++
++              <div className="card">
++                <div className="card-header"><h3>B2CS — Small Consumer Sales</h3><span>{result.b2cs.length} record{result.b2cs.length !== 1 ? 's' : ''}</span></div>
++                <div className="table-wrap">
++                  <table>
++                    <thead><tr><th>Type</th><th>POS</th><th>Rate</th><th className="num">Taxable</th><th className="num">IGST</th><th className="num">CGST</th><th className="num">SGST</th></tr></thead>
++                    <tbody>
++                      {result.b2cs.length === 0 ? <tr><td colSpan={7} className="empty-row">None</td></tr> :
++                        result.b2cs.map((r, i) => (
++                          <tr key={i}><td>{r.sply_ty}</td><td>{r.pos}</td><td>{r.rate}%</td><td className="num">{r.txval.toLocaleString('en-IN')}</td><td className="num">{r.iamt.toLocaleString('en-IN')}</td><td className="num">{r.camt.toLocaleString('en-IN')}</td><td className="num">{r.samt.toLocaleString('en-IN')}</td></tr>
++                        ))}
++                    </tbody>
++                  </table>
++                </div>
++              </div>
++
++              <div className="card">
++                <div className="card-header"><h3>HSN Summary</h3><span>{result.hsn.length} row{result.hsn.length !== 1 ? 's' : ''}</span></div>
++                <div className="table-wrap">
++                  <table>
++                    <thead><tr><th>HSN/SAC</th><th>Rate</th><th>UQC</th><th className="num">Taxable</th><th className="num">IGST</th><th className="num">CGST</th><th className="num">SGST</th></tr></thead>
++                    <tbody>
++                      {result.hsn.map((r, i) => (
++                        <tr key={i}><td>{r.hsn_sc || <span style={{ color: '#dc2626' }}>missing</span>}</td><td>{r.rate}%</td><td>{r.uqc}</td><td className="num">{r.txval.toLocaleString('en-IN')}</td><td className="num">{r.iamt.toLocaleString('en-IN')}</td><td className="num">{r.camt.toLocaleString('en-IN')}</td><td className="num">{r.samt.toLocaleString('en-IN')}</td></tr>
++                      ))}
++                    </tbody>
++                  </table>
++                </div>
++              </div>
++            </>
++          )}
++        </main>
++      </div>
++    </>
++  );
++}
++
++function sum(rows: any[], key: string): number {
++  return Math.round(rows.reduce((s, r) => s + (r[key] || 0), 0) * 100) / 100;
++}
+diff --git a/app/gstr3b/page.tsx b/app/gstr3b/page.tsx
+new file mode 100644
+index 0000000..c86114f
+--- /dev/null
++++ b/app/gstr3b/page.tsx
+@@ -0,0 +1,366 @@
++'use client';
++
++import { useEffect, useState } from 'react';
++import { onAuthStateChanged } from 'firebase/auth';
++import { auth, db } from '../../lib/firebase';
++import { collection, query, where, getDocs, doc, getDoc } from 'firebase/firestore';
++import jsPDF from 'jspdf';
++import posthog from 'posthog-js';
++import { buildGstr3b, Gstr3bResult } from '../../lib/gstr3b';
++
++const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
++
++export default function Gstr3bPage() {
++  const [user, setUser] = useState<any>(null);
++  const [showMenu, setShowMenu] = useState(false);
++  const [profile, setProfile] = useState<any>(null);
++  const [month, setMonth] = useState(new Date().getMonth());
++  const [year, setYear] = useState(new Date().getFullYear());
++  const [loading, setLoading] = useState(false);
++  const [fetched, setFetched] = useState(false);
++  const [result, setResult] = useState<Gstr3bResult | null>(null);
++  const [generating, setGenerating] = useState(false);
++
++  useEffect(() => {
++    onAuthStateChanged(auth, async (currentUser) => {
++      if (!currentUser) { window.location.href = '/login'; return; }
++      setUser(currentUser);
++      const profileSnap = await getDoc(doc(db, 'profiles', currentUser.uid));
++      if (profileSnap.exists()) setProfile(profileSnap.data());
++    });
++  }, []);
++
++  const fetchData = async () => {
++    if (!user) return;
++    setLoading(true);
++    try {
++      const iq = query(collection(db, 'invoices'), where('userId', '==', user.uid));
++      const isnap = await getDocs(iq);
++      const monthInvoices = isnap.docs.map(d => d.data() as any).filter((inv: any) => {
++        if (!inv.date) return false;
++        const dt = new Date(inv.date);
++        return dt.getMonth() === month && dt.getFullYear() === year;
++      });
++      const eq2 = query(collection(db, 'expenses'), where('userId', '==', user.uid));
++      const esnap = await getDocs(eq2);
++      const monthExpenses = esnap.docs.map(d => d.data() as any).filter((exp: any) => {
++        if (!exp.date) return false;
++        const dt = new Date(exp.date);
++        return dt.getMonth() === month && dt.getFullYear() === year;
++      });
++      const r = buildGstr3b(monthInvoices, monthExpenses, month, year);
++      setResult(r);
++      setFetched(true);
++      posthog.capture('gstr3b_previewed', { month: MONTHS[month], year, net: r.net.total, invoices: r.counts.invoices, expenses: r.counts.expenses });
++    } catch (err) {
++      console.error(err);
++      alert('Failed to load data.');
++    } finally {
++      setLoading(false);
++    }
++  };
++
++  const inr = (n: number) => `Rs. ${n.toLocaleString('en-IN')}`;
++
++  const downloadPDF = async () => {
++    if (!result) return;
++    setGenerating(true);
++    try {
++      const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
++      const pw = pdf.internal.pageSize.getWidth();
++      const ph = pdf.internal.pageSize.getHeight();
++
++      pdf.setFillColor(15, 31, 92);
++      pdf.rect(0, 0, pw, 38, 'F');
++      if (profile?.logoBase64) {
++        try {
++          const ext = profile.logoBase64.startsWith('data:image/png') ? 'PNG' : 'JPEG';
++          pdf.addImage(profile.logoBase64, ext, 12, 7, 0, 24);
++        } catch (e) {}
++      }
++      pdf.setFontSize(18); pdf.setFont('helvetica', 'bold'); pdf.setTextColor(255, 255, 255);
++      pdf.text('GSTR-3B SUMMARY', pw - 14, 20, { align: 'right' });
++      pdf.setFontSize(8); pdf.setFont('helvetica', 'normal'); pdf.setTextColor(180, 195, 230);
++      pdf.text(`${result.period}  (${result.fp})`, pw - 14, 28, { align: 'right' });
++
++      let y = 48;
++      pdf.setFontSize(12); pdf.setFont('helvetica', 'bold'); pdf.setTextColor(15, 31, 92);
++      pdf.text(profile?.businessName || 'Your Business', 14, y); y += 5;
++      pdf.setFontSize(8); pdf.setFont('helvetica', 'normal'); pdf.setTextColor(100, 110, 130);
++      if (profile?.gstin) { pdf.text(`GSTIN: ${profile.gstin}`, 14, y); y += 4; }
++      y += 4;
++      pdf.setDrawColor(37, 99, 235); pdf.setLineWidth(0.5); pdf.line(14, y, pw - 14, y); y += 10;
++
++      const row = (label: string, vals: string[], bold = false) => {
++        if (y > ph - 24) { pdf.addPage(); y = 20; }
++        pdf.setFont('helvetica', bold ? 'bold' : 'normal'); pdf.setFontSize(8.5);
++        pdf.setTextColor(bold ? 15 : 60, bold ? 31 : 70, bold ? 92 : 90);
++        pdf.text(label, 16, y);
++        const cols = [pw - 120, pw - 86, pw - 52, pw - 16];
++        vals.forEach((v, i) => pdf.text(v, cols[i], y, { align: 'right' }));
++        y += 6;
++      };
++      const head = (t: string) => {
++        y += 2;
++        pdf.setFillColor(240, 244, 255); pdf.rect(14, y - 4, pw - 28, 8, 'F');
++        pdf.setFont('helvetica', 'bold'); pdf.setFontSize(9); pdf.setTextColor(15, 31, 92);
++        pdf.text(t, 16, y + 1.5);
++        y += 4;
++        pdf.setFontSize(7); pdf.setTextColor(120, 130, 150);
++        pdf.text('IGST', pw - 120, y + 3.5, { align: 'right' });
++        pdf.text('CGST', pw - 86, y + 3.5, { align: 'right' });
++        pdf.text('SGST', pw - 52, y + 3.5, { align: 'right' });
++        pdf.text('TOTAL', pw - 16, y + 3.5, { align: 'right' });
++        y += 8;
++      };
++
++      head('3.1(a) Outward taxable supplies');
++      row('Taxable value', ['', '', '', inr(result.outward.taxableValue)]);
++      row('Tax', [inr(result.outward.igst), inr(result.outward.cgst), inr(result.outward.sgst), inr(result.outward.totalTax)], true);
++      if (result.nilExempt.taxableValue > 0) {
++        y += 2;
++        pdf.setFont('helvetica', 'normal'); pdf.setFontSize(8.5); pdf.setTextColor(60, 70, 90);
++        pdf.text(`3.1(c) Nil-rated / exempt outward supplies (taxable value): ${inr(result.nilExempt.taxableValue)}`, 16, y); y += 6;
++      }
++
++      head('4. Eligible ITC');
++      row('ITC available', [inr(result.itc.igst), inr(result.itc.cgst), inr(result.itc.sgst), inr(result.itc.total)], true);
++
++      head('5. Net tax payable');
++      row('Payable', [inr(result.net.igst), inr(result.net.cgst), inr(result.net.sgst), inr(result.net.total)], true);
++
++      y += 6;
++      if (y > ph - 30) { pdf.addPage(); y = 20; }
++      pdf.setFillColor(15, 31, 92); pdf.rect(14, y, pw - 28, 16, 'F');
++      pdf.setFontSize(10); pdf.setFont('helvetica', 'bold'); pdf.setTextColor(255, 255, 255);
++      pdf.text('NET GST PAYABLE', 20, y + 10);
++      pdf.text(inr(result.net.total), pw - 20, y + 10, { align: 'right' });
++      y += 24;
++
++      pdf.setFontSize(7); pdf.setFont('helvetica', 'normal'); pdf.setTextColor(150, 150, 150);
++      result.warnings.forEach(w => { if (y > ph - 16) { pdf.addPage(); y = 20; } pdf.text(`Note: ${w.message}`, 16, y, { maxWidth: pw - 32 }); y += 8; });
++
++      pdf.setFillColor(240, 244, 255); pdf.rect(0, ph - 12, pw, 12, 'F');
++      pdf.setFontSize(7); pdf.setTextColor(100, 110, 130);
++      pdf.text(`GSTR-3B Summary: ${result.period}`, 14, ph - 5);
++      pdf.text('Generated with Paavti.in', pw - 14, ph - 5, { align: 'right' });
++
++      pdf.save(`Paavti-GSTR3B-${result.fp}.pdf`);
++      posthog.capture('gstr3b_pdf_downloaded', { fp: result.fp });
++    } catch (err) {
++      console.error(err);
++      alert('Failed to generate PDF.');
++    } finally {
++      setGenerating(false);
++    }
++  };
++
++  return (
++    <>
++      <style>{`
++        @import url('https://fonts.googleapis.com/css2?family=Lora:wght@400;500;600&family=DM+Sans:wght@300;400;500;600&display=swap');
++        * { box-sizing: border-box; margin: 0; padding: 0; }
++        body { background: #f0f4ff; }
++        .editor-root { display: flex; min-height: 100vh; font-family: 'DM Sans', sans-serif; }
++        .sidebar { width: 240px; background: #0f1f5c; min-height: 100vh; display: flex; flex-direction: column; position: fixed; left: 0; top: 0; bottom: 0; z-index: 10; }
++        .sidebar-logo { padding: 28px 24px 24px; border-bottom: 1px solid rgba(255,255,255,0.08); }
++        .sidebar-logo h1 { font-family: 'Lora', serif; font-size: 22px; color: #fff; font-weight: 600; }
++        .sidebar-logo p { font-size: 11px; color: rgba(255,255,255,0.4); margin-top: 2px; letter-spacing: 0.5px; text-transform: uppercase; }
++        .sidebar-nav { padding: 20px 12px; flex: 1; }
++        .nav-label { font-size: 10px; color: rgba(255,255,255,0.3); letter-spacing: 1px; text-transform: uppercase; padding: 0 12px; margin-bottom: 8px; margin-top: 16px; }
++        .nav-item { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 8px; color: rgba(255,255,255,0.6); font-size: 13.5px; text-decoration: none; transition: all 0.15s; }
++        .nav-item:hover { background: rgba(255,255,255,0.08); color: #fff; }
++        .nav-item.active { background: rgba(99,130,255,0.2); color: #fff; font-weight: 500; }
++        .sidebar-footer { padding: 16px 12px; border-top: 1px solid rgba(255,255,255,0.08); }
++        .user-chip { display: flex; align-items: center; gap: 10px; padding: 8px 12px; }
++        .user-avatar { width: 32px; height: 32px; background: linear-gradient(135deg, #6382ff, #3b5bdb); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #fff; font-size: 13px; font-weight: 600; flex-shrink: 0; }
++        .user-email { font-size: 11.5px; color: rgba(255,255,255,0.5); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
++        .main { margin-left: 240px; flex: 1; padding: 36px 40px; }
++        .page-header { margin-bottom: 20px; }
++        .page-header h2 { font-family: 'Lora', serif; font-size: 26px; color: #0f1f5c; font-weight: 600; }
++        .page-header p { color: #6b7280; font-size: 14px; margin-top: 4px; }
++        .tabs { display: flex; gap: 8px; margin-bottom: 24px; border-bottom: 1.5px solid #e5e9f5; }
++        .tab { padding: 10px 18px; font-size: 14px; font-weight: 600; color: #6b7280; text-decoration: none; border-bottom: 2px solid transparent; margin-bottom: -1.5px; }
++        .tab.active { color: #2563eb; border-bottom-color: #2563eb; }
++        .tab:hover { color: #2563eb; }
++        .controls { display: flex; align-items: center; gap: 12px; margin-bottom: 28px; flex-wrap: wrap; }
++        .controls select { padding: 10px 14px; border: 1.5px solid #e5e9f5; border-radius: 8px; font-size: 14px; font-family: 'DM Sans', sans-serif; color: #111827; background: #fff; outline: none; }
++        .controls select:focus { border-color: #2563eb; box-shadow: 0 0 0 3px rgba(37,99,235,0.08); }
++        .btn-fetch { background: #2563eb; color: #fff; border: none; padding: 10px 24px; border-radius: 8px; font-size: 14px; font-weight: 600; font-family: 'DM Sans', sans-serif; cursor: pointer; }
++        .btn-fetch:hover { background: #1d4ed8; }
++        .btn-fetch:disabled { opacity: 0.6; cursor: not-allowed; }
++        .btn-download { background: #0f1f5c; color: #fff; border: none; padding: 13px 28px; border-radius: 9px; font-size: 14px; font-weight: 600; font-family: 'DM Sans', sans-serif; cursor: pointer; display: inline-flex; align-items: center; gap: 8px; margin-bottom: 24px; }
++        .btn-download:hover { background: #1a2f7a; }
++        .btn-download:disabled { opacity: 0.6; cursor: not-allowed; }
++        .net-band { background: linear-gradient(135deg, #0f1f5c, #1e3a8a); border-radius: 12px; padding: 24px 28px; margin-bottom: 24px; display: flex; align-items: center; justify-content: space-between; }
++        .net-band .lbl { color: rgba(255,255,255,0.7); font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px; font-weight: 600; }
++        .net-band .val { color: #fff; font-family: 'Lora', serif; font-size: 30px; font-weight: 600; }
++        .net-band .sub { color: rgba(255,255,255,0.6); font-size: 12px; margin-top: 4px; }
++        .card { background: #fff; border-radius: 12px; border: 1px solid #e5e9f5; overflow: hidden; margin-bottom: 20px; }
++        .card-header { padding: 16px 24px; border-bottom: 1px solid #f0f4ff; }
++        .card-header h3 { font-size: 14px; font-weight: 600; color: #0f1f5c; }
++        .card-header span { font-size: 12px; color: #9ca3af; display: block; margin-top: 2px; }
++        .table-wrap { overflow-x: auto; }
++        table { width: 100%; border-collapse: collapse; }
++        th { font-size: 11px; color: #6b7280; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; padding: 10px 16px; text-align: right; background: #f8faff; border-bottom: 1px solid #f0f4ff; }
++        th:first-child { text-align: left; }
++        td { font-size: 13px; color: #374151; padding: 12px 16px; border-bottom: 1px solid #f8faff; text-align: right; }
++        td:first-child { text-align: left; }
++        .total-row td { font-weight: 600; color: #0f1f5c; background: #f8faff; }
++        .no-data { text-align: center; padding: 60px 20px; color: #9ca3af; font-size: 15px; }
++        .warn-box { background: #fffbeb; border: 1px solid #fde68a; border-radius: 12px; padding: 16px 20px; margin-bottom: 20px; }
++        .warn-box h4 { font-size: 13px; color: #92400e; font-weight: 600; margin-bottom: 8px; }
++        .warn-box ul { margin: 0; padding-left: 18px; }
++        .warn-box li { font-size: 12.5px; color: #92400e; margin-bottom: 4px; }
++        .menu-toggle { display: none; background: none; border: none; color: #ffffff; font-size: 30px; cursor: pointer; padding: 4px 8px; }
++        @media (max-width: 768px) {
++          .editor-root { flex-direction: column; }
++          .sidebar { width: 100% !important; min-height: auto !important; position: relative !important; flex-direction: row !important; flex-wrap: wrap !important; align-items: center; top: auto !important; bottom: auto !important; left: auto !important; height: auto !important; z-index: auto !important; }
++          .sidebar-logo { display: flex !important; align-items: center; width: 100%; gap: 12px; padding: 12px 16px !important; border-bottom: none; }
++          .sidebar-logo p { display: none; }
++          .sidebar-logo img { height: 42px !important; }
++          .menu-toggle { display: block !important; margin-left: auto; font-size: 32px; color: #ffffff !important; }
++          .sidebar-nav { display: none !important; flex-direction: column; padding: 0 12px 12px; gap: 2px; width: 100%; }
++          .sidebar-nav.nav-open { display: flex !important; }
++          .nav-label { display: none; }
++          .nav-item { padding: 12px 14px; font-size: 15px; }
++          .sidebar-footer { display: none; }
++          .main { margin-left: 0 !important; padding: 16px !important; width: 100% !important; }
++          .page-header h2 { font-size: 22px; }
++          .controls { flex-direction: column; align-items: stretch; }
++          .controls select, .controls button { width: 100%; }
++          .net-band { flex-direction: column; align-items: flex-start; gap: 8px; }
++          table { font-size: 12px; }
++          th { font-size: 10px; padding: 8px 10px; }
++          td { font-size: 12.5px; padding: 10px; }
++        }
++      `}</style>
++
++      <div className="editor-root">
++        <aside className="sidebar">
++          <div className="sidebar-logo">
++            <img src="/logo-white.svg" alt="Paavti" style={{ height: '38px' }} />
++            <p>Business Manager</p>
++            <button className="menu-toggle" onClick={() => setShowMenu(!showMenu)}>&#9776;</button>
++          </div>
++          <nav className={`sidebar-nav ${showMenu ? 'nav-open' : ''}`}>
++            <div className="nav-label">Main</div>
++            <a href="/dashboard" className="nav-item"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>Dashboard</a>
++            <a href="/editor" className="nav-item"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/></svg>New Invoice</a>
++            <a href="/quote-editor" className="nav-item"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="9" y1="13" x2="15" y2="13"/></svg>New Quote</a>
++            <a href="/receipt-editor" className="nav-item"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>New Receipt</a>
++            <a href="/reports" className="nav-item"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="9" y1="13" x2="15" y2="13"/><line x1="9" y1="17" x2="15" y2="17"/></svg>Reports</a>
++            <a href="/gstr1" className="nav-item active"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>GST Filing</a>
++            <div className="nav-label">Documents</div>
++            <a href="/dashboard" className="nav-item"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>Invoices</a>
++            <a href="/quotes" className="nav-item"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>Quotes</a>
++            <a href="/expenses" className="nav-item"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>Expenses</a>
++            <a href="/clients" className="nav-item"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>Clients</a>
++            <div className="nav-label">Settings</div>
++            <a href="/profile" className="nav-item"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>Business Profile</a>
++            <a href="/templates" className="nav-item"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg>Templates</a>
++          </nav>
++          <div className="sidebar-footer">
++            <div className="user-chip">
++              <div className="user-avatar">{user?.email?.[0]?.toUpperCase()}</div>
++              <div className="user-email">{user?.email}</div>
++            </div>
++          </div>
++        </aside>
++
++        <main className="main">
++          <div className="page-header">
++            <h2>GST Filing</h2>
++            <p>Prepare your monthly GST returns from your invoices and expenses.</p>
++          </div>
++
++          <div className="tabs">
++            <a href="/gstr1" className="tab">GSTR-1 (Sales)</a>
++            <a href="/gstr3b" className="tab active">GSTR-3B (Summary)</a>
++          </div>
++
++          <div className="controls">
++            <select value={month} onChange={e => { setMonth(parseInt(e.target.value)); setFetched(false); }}>
++              {MONTHS.map((m, i) => <option key={i} value={i}>{m}</option>)}
++            </select>
++            <select value={year} onChange={e => { setYear(parseInt(e.target.value)); setFetched(false); }}>
++              {[2024, 2025, 2026, 2027].map(y => <option key={y} value={y}>{y}</option>)}
++            </select>
++            <button className="btn-fetch" onClick={fetchData} disabled={loading}>
++              {loading ? 'Loading...' : 'Prepare GSTR-3B'}
++            </button>
++          </div>
++
++          {!fetched || !result ? (
++            <div className="no-data">Select a period and click Prepare GSTR-3B.</div>
++          ) : (result.counts.invoices === 0 && result.counts.expenses === 0) ? (
++            <div className="no-data">No invoices or expenses found for {result.period}.</div>
++          ) : (
++            <>
++              <div className="net-band">
++                <div>
++                  <div className="lbl">Net GST Payable</div>
++                  <div className="sub">{result.period} · {result.counts.invoices} invoices · {result.counts.expenses} expenses</div>
++                </div>
++                <div className="val">{result.net.total < 0 ? `(${inr(Math.abs(result.net.total))} credit)` : inr(result.net.total)}</div>
++              </div>
++
++              <button className="btn-download" onClick={downloadPDF} disabled={generating}>
++                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
++                {generating ? 'Generating...' : 'Download PDF'}
++              </button>
++
++              {result.warnings.length > 0 && (
++                <div className="warn-box">
++                  <h4>Notes for your CA</h4>
++                  <ul>{result.warnings.map((w, i) => <li key={i}>{w.message}</li>)}</ul>
++                </div>
++              )}
++
++              <div className="card">
++                <div className="card-header"><h3>3.1 Outward Supplies (Output Tax)</h3><span>Tax you collected on sales</span></div>
++                <div className="table-wrap">
++                  <table>
++                    <thead><tr><th>Nature</th><th>Taxable Value</th><th>IGST</th><th>CGST</th><th>SGST</th></tr></thead>
++                    <tbody>
++                      <tr><td>(a) Taxable supplies</td><td>{inr(result.outward.taxableValue)}</td><td>{inr(result.outward.igst)}</td><td>{inr(result.outward.cgst)}</td><td>{inr(result.outward.sgst)}</td></tr>
++                      <tr><td>(c) Nil-rated / exempt</td><td>{inr(result.nilExempt.taxableValue)}</td><td>—</td><td>—</td><td>—</td></tr>
++                      <tr className="total-row"><td>Total output tax</td><td>—</td><td>{inr(result.outward.igst)}</td><td>{inr(result.outward.cgst)}</td><td>{inr(result.outward.sgst)}</td></tr>
++                    </tbody>
++                  </table>
++                </div>
++              </div>
++
++              <div className="card">
++                <div className="card-header"><h3>4. Eligible ITC (Input Credit)</h3><span>GST you paid on expenses, claimable as credit</span></div>
++                <div className="table-wrap">
++                  <table>
++                    <thead><tr><th>Nature</th><th>IGST</th><th>CGST</th><th>SGST</th><th>Total</th></tr></thead>
++                    <tbody>
++                      <tr className="total-row"><td>(A5) All other ITC</td><td>{inr(result.itc.igst)}</td><td>{inr(result.itc.cgst)}</td><td>{inr(result.itc.sgst)}</td><td>{inr(result.itc.total)}</td></tr>
++                    </tbody>
++                  </table>
++                </div>
++              </div>
++
++              <div className="card">
++                <div className="card-header"><h3>5. Net Tax Payable</h3><span>Output tax minus input credit, per head</span></div>
++                <div className="table-wrap">
++                  <table>
++                    <thead><tr><th>Head</th><th>Output</th><th>ITC</th><th>Net Payable</th></tr></thead>
++                    <tbody>
++                      <tr><td>IGST</td><td>{inr(result.outward.igst)}</td><td>{inr(result.itc.igst)}</td><td>{inr(result.net.igst)}</td></tr>
++                      <tr><td>CGST</td><td>{inr(result.outward.cgst)}</td><td>{inr(result.itc.cgst)}</td><td>{inr(result.net.cgst)}</td></tr>
++                      <tr><td>SGST</td><td>{inr(result.outward.sgst)}</td><td>{inr(result.itc.sgst)}</td><td>{inr(result.net.sgst)}</td></tr>
++                      <tr className="total-row"><td>Total</td><td>{inr(result.outward.totalTax)}</td><td>{inr(result.itc.total)}</td><td>{inr(result.net.total)}</td></tr>
++                    </tbody>
++                  </table>
++                </div>
++              </div>
++            </>
++          )}
++        </main>
++      </div>
++    </>
++  );
++}
+diff --git a/app/invoice/[id]/page.tsx b/app/invoice/[id]/page.tsx
+index e73a366..e423d75 100644
+--- a/app/invoice/[id]/page.tsx
++++ b/app/invoice/[id]/page.tsx
+@@ -308,6 +308,7 @@ export default function InvoiceDetail() {
+             <a href="/quote-editor" className="nav-item"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="9" y1="13" x2="15" y2="13"/></svg>New Quote</a>
+             <a href="/receipt-editor" className="nav-item"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>New Receipt</a>
+             <a href="/reports" className="nav-item"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="9" y1="13" x2="15" y2="13"/><line x1="9" y1="17" x2="15" y2="17"/></svg>Reports</a>
++            <a href="/gstr1" className="nav-item"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>GST Filing</a>
+             <div className="nav-label">Documents</div>
+             <a href="/dashboard" className="nav-item active"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>Invoices</a>
+             <a href="/quotes" className="nav-item"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>Quotes</a>
+diff --git a/app/profile/page.tsx b/app/profile/page.tsx
+index 621dfac..95dd097 100644
+--- a/app/profile/page.tsx
++++ b/app/profile/page.tsx
+@@ -165,6 +165,7 @@ export default function ProfilePage() {
+             <a href="/quote-editor" className="nav-item"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="9" y1="13" x2="15" y2="13"/></svg>New Quote</a>
+             <a href="/receipt-editor" className="nav-item"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>New Receipt</a>
+             <a href="/reports" className="nav-item"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="9" y1="13" x2="15" y2="13"/><line x1="9" y1="17" x2="15" y2="17"/></svg>Reports</a>
++            <a href="/gstr1" className="nav-item"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>GST Filing</a>
+             <div className="nav-label">Documents</div>
+             <a href="/dashboard" className="nav-item"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>Invoices</a>
+             <a href="/quotes" className="nav-item"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>Quotes</a>
+diff --git a/app/quote-editor/page.tsx b/app/quote-editor/page.tsx
+index ea43bf0..7ab607c 100644
+--- a/app/quote-editor/page.tsx
++++ b/app/quote-editor/page.tsx
+@@ -381,6 +381,7 @@ export default function ReceiptEditor() {
+             <a href="/quote-editor" className="nav-item active"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="9" y1="13" x2="15" y2="13"/></svg>New Quote</a>
+             <a href="/receipt-editor" className="nav-item"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>New Receipt</a>
+             <a href="/reports" className="nav-item"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="9" y1="13" x2="15" y2="13"/><line x1="9" y1="17" x2="15" y2="17"/></svg>Reports</a>
++            <a href="/gstr1" className="nav-item"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>GST Filing</a>
+             <div className="nav-label">Documents</div>
+             <a href="/dashboard" className="nav-item"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>Invoices</a>
+             <a href="/quotes" className="nav-item"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>Quotes</a>
+diff --git a/app/quote/[id]/page.tsx b/app/quote/[id]/page.tsx
+index 47362e7..3fb628b 100644
+--- a/app/quote/[id]/page.tsx
++++ b/app/quote/[id]/page.tsx
+@@ -259,6 +259,7 @@ export default function QuoteDetail() {
+             <a href="/quote-editor" className="nav-item"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="9" y1="13" x2="15" y2="13"/></svg>New Quote</a>
+             <a href="/receipt-editor" className="nav-item"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>New Receipt</a>
+             <a href="/reports" className="nav-item"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="9" y1="13" x2="15" y2="13"/><line x1="9" y1="17" x2="15" y2="17"/></svg>Reports</a>
++            <a href="/gstr1" className="nav-item"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>GST Filing</a>
+             <div className="nav-label">Documents</div>
+             <a href="/dashboard" className="nav-item"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>Invoices</a>
+             <a href="/quotes" className="nav-item active"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>Quotes</a>
+diff --git a/app/quotes/page.tsx b/app/quotes/page.tsx
+index 24f29c1..4ca9c05 100644
+--- a/app/quotes/page.tsx
++++ b/app/quotes/page.tsx
+@@ -213,6 +213,7 @@ export default function QuotesPage() {
+             <a href="/quote-editor" className="nav-item"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="9" y1="13" x2="15" y2="13"/></svg>New Quote</a>
+             <a href="/receipt-editor" className="nav-item"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>New Receipt</a>
+             <a href="/reports" className="nav-item"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="9" y1="13" x2="15" y2="13"/><line x1="9" y1="17" x2="15" y2="17"/></svg>Reports</a>
++            <a href="/gstr1" className="nav-item"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>GST Filing</a>
+             <div className="nav-label">Documents</div>
+             <a href="/dashboard" className="nav-item"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>Invoices</a>
+             <a href="/quotes" className="nav-item active"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>Quotes</a>
+diff --git a/app/receipt-editor/page.tsx b/app/receipt-editor/page.tsx
+index 4bba630..5d43597 100644
+--- a/app/receipt-editor/page.tsx
++++ b/app/receipt-editor/page.tsx
+@@ -382,6 +382,7 @@ export default function ReceiptEditor() {
+             <a href="/quote-editor" className="nav-item"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="9" y1="13" x2="15" y2="13"/></svg>New Quote</a>
+             <a href="/receipt-editor" className="nav-item active"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>New Receipt</a>
+             <a href="/reports" className="nav-item"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="9" y1="13" x2="15" y2="13"/><line x1="9" y1="17" x2="15" y2="17"/></svg>Reports</a>
++            <a href="/gstr1" className="nav-item"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>GST Filing</a>
+             <div className="nav-label">Documents</div>
+             <a href="/dashboard" className="nav-item"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>Invoices</a>
+             <a href="/quotes" className="nav-item"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>Quotes</a>
+diff --git a/app/reports/page.tsx b/app/reports/page.tsx
+index df4ea7e..65fb011 100644
+--- a/app/reports/page.tsx
++++ b/app/reports/page.tsx
+@@ -431,6 +431,7 @@ export default function Reports() {
+             <a href="/quote-editor" className="nav-item"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="9" y1="13" x2="15" y2="13"/></svg>New Quote</a>
+             <a href="/receipt-editor" className="nav-item"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>New Receipt</a>
+             <a href="/reports" className="nav-item active"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="9" y1="13" x2="15" y2="13"/><line x1="9" y1="17" x2="15" y2="17"/></svg>Reports</a>
++            <a href="/gstr1" className="nav-item"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>GST Filing</a>
+             <div className="nav-label">Documents</div>
+             <a href="/dashboard" className="nav-item"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>Invoices</a>
+             <a href="/quotes" className="nav-item"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>Quotes</a>
+diff --git a/lib/gstr1.ts b/lib/gstr1.ts
+new file mode 100644
+index 0000000..57b52d4
+--- /dev/null
++++ b/lib/gstr1.ts
+@@ -0,0 +1,354 @@
++// GSTR-1 export logic for Paavti.
++// Turns saved invoices + business profile into the GSTR-1 sections a CA files:
++// B2B, B2CL, B2CS and an HSN summary, plus a GSTN-schema JSON that uploads
++// directly to the GST portal.
++//
++// Rules baked in (verified July 2026):
++// - B2CL threshold: inter-state B2C invoice value > Rs 1,00,000 (effective 01-Aug-2024,
++//   Notification 12/2024-CT, GST Council 53rd meeting). Below/equal goes to B2CS.
++// - Place of supply is a 2-digit state code. For B2B it comes from the client GSTIN;
++//   for intra-state supplies it is the supplier's own state.
++// - Tax split: intra-state => CGST + SGST (half each); inter-state => IGST.
++
++export const B2CL_THRESHOLD = 100000; // Rs 1 lakh, inter-state B2C
++
++// GST state name -> 2-digit code. Used as a fallback for place of supply when a
++// GSTIN is not available (kept lowercase, punctuation-insensitive on lookup).
++export const STATE_CODES: Record<string, string> = {
++  'jammu and kashmir': '01', 'jammu & kashmir': '01',
++  'himachal pradesh': '02',
++  'punjab': '03',
++  'chandigarh': '04',
++  'uttarakhand': '05', 'uttaranchal': '05',
++  'haryana': '06',
++  'delhi': '07',
++  'rajasthan': '08',
++  'uttar pradesh': '09',
++  'bihar': '10',
++  'sikkim': '11',
++  'arunachal pradesh': '12',
++  'nagaland': '13',
++  'manipur': '14',
++  'mizoram': '15',
++  'tripura': '16',
++  'meghalaya': '17',
++  'assam': '18',
++  'west bengal': '19',
++  'jharkhand': '20',
++  'odisha': '21', 'orissa': '21',
++  'chhattisgarh': '22',
++  'madhya pradesh': '23',
++  'gujarat': '24',
++  'dadra and nagar haveli and daman and diu': '26', 'daman and diu': '26', 'dadra and nagar haveli': '26',
++  'maharashtra': '27',
++  'karnataka': '29',
++  'goa': '30',
++  'lakshadweep': '31',
++  'kerala': '32',
++  'tamil nadu': '33',
++  'puducherry': '34', 'pondicherry': '34',
++  'andaman and nicobar islands': '35', 'andaman and nicobar': '35',
++  'telangana': '36',
++  'andhra pradesh': '37',
++  'ladakh': '38',
++  'other territory': '97',
++};
++
++const STATE_NAME_BY_CODE: Record<string, string> = {
++  '01': 'Jammu and Kashmir', '02': 'Himachal Pradesh', '03': 'Punjab', '04': 'Chandigarh',
++  '05': 'Uttarakhand', '06': 'Haryana', '07': 'Delhi', '08': 'Rajasthan', '09': 'Uttar Pradesh',
++  '10': 'Bihar', '11': 'Sikkim', '12': 'Arunachal Pradesh', '13': 'Nagaland', '14': 'Manipur',
++  '15': 'Mizoram', '16': 'Tripura', '17': 'Meghalaya', '18': 'Assam', '19': 'West Bengal',
++  '20': 'Jharkhand', '21': 'Odisha', '22': 'Chhattisgarh', '23': 'Madhya Pradesh', '24': 'Gujarat',
++  '26': 'Dadra and Nagar Haveli and Daman and Diu', '27': 'Maharashtra', '29': 'Karnataka',
++  '30': 'Goa', '31': 'Lakshadweep', '32': 'Kerala', '33': 'Tamil Nadu', '34': 'Puducherry',
++  '35': 'Andaman and Nicobar Islands', '36': 'Telangana', '37': 'Andhra Pradesh', '38': 'Ladakh',
++  '97': 'Other Territory',
++};
++
++export function stateCodeFromName(name?: string): string {
++  if (!name) return '';
++  const key = name.trim().toLowerCase().replace(/&/g, 'and').replace(/\s+/g, ' ');
++  return STATE_CODES[key] || '';
++}
++
++export function stateLabel(code: string): string {
++  if (!code) return '';
++  return `${code}-${STATE_NAME_BY_CODE[code] || ''}`.replace(/-$/, '');
++}
++
++// A GSTIN encodes its state in the first two characters.
++export function stateCodeFromGSTIN(gstin?: string): string {
++  if (!gstin) return '';
++  const s = gstin.trim();
++  return /^\d{2}/.test(s) ? s.substring(0, 2) : '';
++}
++
++const GSTIN_RE = /^\d{2}[A-Z]{5}\d{4}[A-Z][A-Z0-9]Z[A-Z0-9]$/i;
++export function isValidGSTIN(gstin?: string): boolean {
++  if (!gstin) return false;
++  return GSTIN_RE.test(gstin.trim());
++}
++
++export interface InvoiceLike {
++  invoiceNumber?: string;
++  date?: string;            // ISO yyyy-mm-dd
++  clientName?: string;
++  clientGSTIN?: string;
++  amount?: number;          // taxable value (subtotal)
++  gstRate?: string | number;
++  isIntraState?: boolean;
++  total?: number;           // invoice value incl. tax
++  hsn?: string;             // optional HSN/SAC code
++  unit?: string;            // optional UQC, e.g. NOS / OTH
++  description?: string;
++}
++
++export interface ProfileLike {
++  gstin?: string;
++  state?: string;
++  businessName?: string;
++}
++
++export interface Gstr1Warning {
++  invoiceNumber: string;
++  message: string;
++}
++
++export interface B2BRow {
++  ctin: string; inum: string; idt: string; val: number; pos: string; posLabel: string;
++  rchrg: 'N'; inv_typ: 'R'; rate: number; txval: number; iamt: number; camt: number; samt: number;
++  clientName: string;
++}
++export interface B2CLRow {
++  pos: string; posLabel: string; inum: string; idt: string; val: number; rate: number; txval: number; iamt: number;
++  clientName: string;
++}
++export interface B2CSRow {
++  sply_ty: 'INTRA' | 'INTER'; pos: string; posLabel: string; typ: 'OE'; rate: number; txval: number; iamt: number; camt: number; samt: number;
++}
++export interface HSNRow {
++  num: number; hsn_sc: string; desc: string; uqc: string; qty: number; rate: number;
++  txval: number; iamt: number; camt: number; samt: number; total: number;
++}
++
++export interface Gstr1Result {
++  gstin: string;
++  fp: string;            // MMYYYY
++  period: string;        // human label
++  b2b: B2BRow[];
++  b2cl: B2CLRow[];
++  b2cs: B2CSRow[];
++  hsn: HSNRow[];
++  totals: { taxable: number; igst: number; cgst: number; sgst: number; invoiceValue: number; count: number };
++  warnings: Gstr1Warning[];
++  json: any;             // GSTN GSTR-1 upload schema
++}
++
++function round2(n: number): number {
++  return Math.round((n + Number.EPSILON) * 100) / 100;
++}
++
++function isoToDdmmyyyy(iso?: string): string {
++  if (!iso) return '';
++  const parts = iso.split('-');
++  if (parts.length !== 3) return iso;
++  return `${parts[2]}-${parts[1]}-${parts[0]}`;
++}
++
++// month is 0-indexed (Jan = 0), matching JS Date + the reports page.
++export function buildGstr1(
++  invoices: InvoiceLike[],
++  profile: ProfileLike,
++  month: number,
++  year: number,
++): Gstr1Result {
++  const warnings: Gstr1Warning[] = [];
++  const supplierGstin = (profile.gstin || '').trim().toUpperCase();
++  const supplierState = stateCodeFromGSTIN(supplierGstin) || stateCodeFromName(profile.state);
++
++  if (!supplierGstin) {
++    warnings.push({ invoiceNumber: '-', message: 'Your business GSTIN is missing. Add it in Business Profile before filing.' });
++  }
++
++  const b2b: B2BRow[] = [];
++  const b2cl: B2CLRow[] = [];
++  const b2cs: B2CSRow[] = [];
++  // B2CS aggregates by (place of supply, rate, supply type); accumulate then flatten.
++  const b2csMap = new Map<string, B2CSRow>();
++  // HSN aggregates by (hsn code, rate); we group by rate when HSN is absent.
++  const hsnMap = new Map<string, HSNRow>();
++
++  let tTax = 0, tIgst = 0, tCgst = 0, tSgst = 0, tVal = 0;
++
++  for (const inv of invoices) {
++    const inum = inv.invoiceNumber || '';
++    const taxable = round2(Number(inv.amount) || 0);
++    const rate = parseFloat(String(inv.gstRate)) || 0;
++    const tax = round2(taxable * rate / 100);
++    const isIntra = inv.isIntraState === true;
++    const val = round2(Number(inv.total) || round2(taxable + tax));
++    const idt = isoToDdmmyyyy(inv.date);
++
++    const igst = isIntra ? 0 : tax;
++    const cgst = isIntra ? round2(tax / 2) : 0;
++    const sgst = isIntra ? round2(tax / 2) : 0;
++
++    tTax += taxable; tIgst += igst; tCgst += cgst; tSgst += sgst; tVal += val;
++
++    // Place of supply
++    let pos = '';
++    const clientGstin = (inv.clientGSTIN || '').trim().toUpperCase();
++    const hasGstin = !!clientGstin;
++    if (isIntra) {
++      pos = supplierState;
++    } else if (hasGstin) {
++      pos = stateCodeFromGSTIN(clientGstin);
++    }
++    if (!pos) {
++      pos = supplierState; // safe default
++      if (!isIntra) {
++        warnings.push({ invoiceNumber: inum, message: 'Inter-state sale with no client GSTIN, so place of supply is unknown. Defaulted to your state. Verify before filing.' });
++      }
++    }
++    const posLabel = stateLabel(pos);
++
++    if (hasGstin) {
++      if (!isValidGSTIN(clientGstin)) {
++        warnings.push({ invoiceNumber: inum, message: `Client GSTIN "${clientGstin}" is not a valid 15-character GSTIN. It will be reported as-is.` });
++      }
++      b2b.push({ ctin: clientGstin, inum, idt, val, pos, posLabel, rchrg: 'N', inv_typ: 'R', rate, txval: taxable, iamt: igst, camt: cgst, samt: sgst, clientName: inv.clientName || '' });
++    } else if (!isIntra && val > B2CL_THRESHOLD) {
++      b2cl.push({ pos, posLabel, inum, idt, val, rate, txval: taxable, iamt: igst, clientName: inv.clientName || '' });
++    } else {
++      const sply_ty: 'INTRA' | 'INTER' = isIntra ? 'INTRA' : 'INTER';
++      const key = `${sply_ty}|${pos}|${rate}`;
++      const existing = b2csMap.get(key);
++      if (existing) {
++        existing.txval = round2(existing.txval + taxable);
++        existing.iamt = round2(existing.iamt + igst);
++        existing.camt = round2(existing.camt + cgst);
++        existing.samt = round2(existing.samt + sgst);
++      } else {
++        b2csMap.set(key, { sply_ty, pos, posLabel, typ: 'OE', rate, txval: taxable, iamt: igst, camt: cgst, samt: sgst });
++      }
++    }
++
++    // HSN summary
++    const hsnCode = (inv.hsn || '').trim();
++    const uqc = (inv.unit || 'OTH').trim().toUpperCase();
++    if (!hsnCode) {
++      warnings.push({ invoiceNumber: inum, message: 'No HSN/SAC code on this invoice. Grouped by tax rate in the HSN summary. Add HSN codes for a complete return.' });
++    }
++    const hkey = `${hsnCode || 'NA'}|${rate}`;
++    const hex = hsnMap.get(hkey);
++    if (hex) {
++      hex.txval = round2(hex.txval + taxable);
++      hex.iamt = round2(hex.iamt + igst);
++      hex.camt = round2(hex.camt + cgst);
++      hex.samt = round2(hex.samt + sgst);
++      hex.total = round2(hex.total + val);
++    } else {
++      hsnMap.set(hkey, {
++        num: 0, hsn_sc: hsnCode || '', desc: inv.description ? String(inv.description).substring(0, 30) : '',
++        uqc: uqc || 'OTH', qty: 0, rate, txval: taxable, iamt: igst, camt: cgst, samt: sgst, total: val,
++      });
++    }
++  }
++
++  for (const [, row] of b2csMap) b2cs.push(row);
++  const hsn = Array.from(hsnMap.values()).map((h, i) => ({ ...h, num: i + 1 }));
++
++  const fp = `${String(month + 1).padStart(2, '0')}${year}`;
++  const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
++  const period = `${MONTHS[month]} ${year}`;
++
++  const json = buildGstnJson(supplierGstin, fp, b2b, b2cl, b2cs, hsn);
++
++  return {
++    gstin: supplierGstin,
++    fp,
++    period,
++    b2b, b2cl, b2cs, hsn,
++    totals: {
++      taxable: round2(tTax), igst: round2(tIgst), cgst: round2(tCgst), sgst: round2(tSgst),
++      invoiceValue: round2(tVal), count: invoices.length,
++    },
++    warnings,
++    json,
++  };
++}
++
++// GSTN GSTR-1 upload schema (portal-importable JSON).
++function buildGstnJson(gstin: string, fp: string, b2b: B2BRow[], b2cl: B2CLRow[], b2cs: B2CSRow[], hsn: HSNRow[]) {
++  // B2B grouped by counterparty GSTIN.
++  const b2bByCtin = new Map<string, B2BRow[]>();
++  for (const r of b2b) {
++    const arr = b2bByCtin.get(r.ctin) || [];
++    arr.push(r);
++    b2bByCtin.set(r.ctin, arr);
++  }
++  const b2bJson = Array.from(b2bByCtin.entries()).map(([ctin, rows]) => ({
++    ctin,
++    inv: rows.map(r => ({
++      inum: r.inum,
++      idt: r.idt,
++      val: r.val,
++      pos: r.pos,
++      rchrg: r.rchrg,
++      inv_typ: r.inv_typ,
++      itms: [{
++        num: 1,
++        itm_det: r.iamt > 0
++          ? { txval: r.txval, rt: r.rate, iamt: r.iamt, csamt: 0 }
++          : { txval: r.txval, rt: r.rate, camt: r.camt, samt: r.samt, csamt: 0 },
++      }],
++    })),
++  }));
++
++  // B2CL grouped by place of supply.
++  const b2clByPos = new Map<string, B2CLRow[]>();
++  for (const r of b2cl) {
++    const arr = b2clByPos.get(r.pos) || [];
++    arr.push(r);
++    b2clByPos.set(r.pos, arr);
++  }
++  const b2clJson = Array.from(b2clByPos.entries()).map(([pos, rows]) => ({
++    pos,
++    inv: rows.map(r => ({
++      inum: r.inum,
++      idt: r.idt,
++      val: r.val,
++      itms: [{ num: 1, itm_det: { txval: r.txval, rt: r.rate, iamt: r.iamt, csamt: 0 } }],
++    })),
++  }));
++
++  const b2csJson = b2cs.map(r => (
++    r.sply_ty === 'INTRA'
++      ? { sply_ty: 'INTRA', pos: r.pos, typ: 'OE', txval: r.txval, rt: r.rate, camt: r.camt, samt: r.samt, csamt: 0 }
++      : { sply_ty: 'INTER', pos: r.pos, typ: 'OE', txval: r.txval, rt: r.rate, iamt: r.iamt, csamt: 0 }
++  ));
++
++  const hsnJson = {
++    data: hsn.map(h => ({
++      num: h.num,
++      hsn_sc: h.hsn_sc,
++      desc: h.desc,
++      uqc: h.uqc,
++      qty: h.qty,
++      txval: h.txval,
++      rt: h.rate,
++      iamt: h.iamt,
++      camt: h.camt,
++      samt: h.samt,
++      csamt: 0,
++    })),
++  };
++
++  const out: any = { gstin, fp, version: 'GST3.2.2', hash: 'hash' };
++  if (b2bJson.length) out.b2b = b2bJson;
++  if (b2clJson.length) out.b2cl = b2clJson;
++  if (b2csJson.length) out.b2cs = b2csJson;
++  if (hsnJson.data.length) out.hsn = hsnJson;
++  return out;
++}
+diff --git a/lib/gstr3b.ts b/lib/gstr3b.ts
+new file mode 100644
+index 0000000..369db2f
+--- /dev/null
++++ b/lib/gstr3b.ts
+@@ -0,0 +1,121 @@
++// GSTR-3B summary logic for Paavti.
++// GSTR-3B is the monthly self-assessment return: total outward tax (from invoices)
++// minus eligible input tax credit (from expenses) = net GST payable.
++//
++// Data notes:
++// - Invoice.amount is the taxable value; tax is split CGST+SGST (intra) or IGST (inter).
++// - Invoice gstRate 0 is treated as nil-rated / exempt outward supply (table 3.1(c)).
++// - Expense.amount is GST-INCLUSIVE, so input GST = amount * rate / (100 + rate)
++//   (same basis the monthly report uses).
++// - Expenses carry no intra/inter flag, so ITC cannot be head-split from data.
++//   We default eligible ITC to CGST + SGST (half each), the common case for local
++//   SME purchases, and flag it for the CA to reclassify any inter-state (IGST) buys.
++
++import { InvoiceLike } from './gstr1';
++
++export interface ExpenseLike {
++  amount?: number;      // GST-inclusive total
++  gstRate?: string | number;
++  category?: string;
++  date?: string;
++  vendor?: string;
++}
++
++export interface Gstr3bWarning { message: string; }
++
++export interface Gstr3bResult {
++  fp: string;
++  period: string;
++  outward: { taxableValue: number; igst: number; cgst: number; sgst: number; totalTax: number };
++  nilExempt: { taxableValue: number };
++  itc: { total: number; igst: number; cgst: number; sgst: number };
++  net: { total: number; igst: number; cgst: number; sgst: number };
++  counts: { invoices: number; expenses: number };
++  warnings: Gstr3bWarning[];
++}
++
++function round2(n: number): number {
++  return Math.round((n + Number.EPSILON) * 100) / 100;
++}
++
++const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
++
++export function buildGstr3b(
++  invoices: InvoiceLike[],
++  expenses: ExpenseLike[],
++  month: number,
++  year: number,
++): Gstr3bResult {
++  const warnings: Gstr3bWarning[] = [];
++
++  let oTax = 0, oIgst = 0, oCgst = 0, oSgst = 0, oTaxable = 0, nilTaxable = 0;
++
++  for (const inv of invoices) {
++    const taxable = round2(Number(inv.amount) || 0);
++    const rate = parseFloat(String(inv.gstRate)) || 0;
++    if (rate === 0) {
++      nilTaxable += taxable;
++      continue;
++    }
++    const tax = round2(taxable * rate / 100);
++    const isIntra = inv.isIntraState === true;
++    oTaxable += taxable;
++    oTax += tax;
++    if (isIntra) {
++      oCgst += round2(tax / 2);
++      oSgst += round2(tax / 2);
++    } else {
++      oIgst += tax;
++    }
++  }
++
++  // Eligible ITC from expenses (input GST embedded in the inclusive amount).
++  let itcTotal = 0;
++  let hasInputGst = false;
++  for (const exp of expenses) {
++    const rate = parseFloat(String(exp.gstRate)) || 0;
++    if (rate <= 0) continue;
++    hasInputGst = true;
++    const amt = Number(exp.amount) || 0;
++    itcTotal += round2(amt * rate / (100 + rate));
++  }
++  itcTotal = round2(itcTotal);
++
++  // Default head split for ITC (no intra/inter data on expenses).
++  const itcCgst = round2(itcTotal / 2);
++  const itcSgst = round2(itcTotal - itcCgst); // keep the two halves summing exactly to total
++  const itcIgst = 0;
++
++  if (hasInputGst) {
++    warnings.push({ message: 'Eligible ITC is split as CGST + SGST (half each), assuming local/intra-state purchases. If you bought inter-state (IGST) this month, ask your CA to reclassify that portion.' });
++  }
++  if (invoices.some(i => (parseFloat(String(i.gstRate)) || 0) === 0)) {
++    warnings.push({ message: 'Invoices at 0% are reported as nil-rated / exempt outward supplies (table 3.1(c)), not taxable sales.' });
++  }
++
++  const outward = {
++    taxableValue: round2(oTaxable),
++    igst: round2(oIgst),
++    cgst: round2(oCgst),
++    sgst: round2(oSgst),
++    totalTax: round2(oTax),
++  };
++  const itc = { total: itcTotal, igst: itcIgst, cgst: itcCgst, sgst: itcSgst };
++  const net = {
++    igst: round2(outward.igst - itc.igst),
++    cgst: round2(outward.cgst - itc.cgst),
++    sgst: round2(outward.sgst - itc.sgst),
++    total: round2(outward.totalTax - itc.total),
++  };
++
++  const fp = `${String(month + 1).padStart(2, '0')}${year}`;
++  const period = `${MONTHS[month]} ${year}`;
++
++  return {
++    fp, period, outward,
++    nilExempt: { taxableValue: round2(nilTaxable) },
++    itc, net,
++    counts: { invoices: invoices.length, expenses: expenses.length },
++    warnings,
++  };
++}

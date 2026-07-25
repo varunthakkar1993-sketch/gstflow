@@ -76,6 +76,7 @@ export default function Dashboard() {
     return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
   });
   const thisMonthRevenue = thisMonth.reduce((sum, inv) => sum + (inv.total || 0), 0);
+  const thisMonthGST = thisMonth.reduce((sum, inv) => sum + (inv.amount || 0) * (parseFloat(inv.gstRate) || 0) / 100, 0);
   const thisMonthInvoiceCount = thisMonth.length;
   const freeLimit = 5;
   const atLimit = !isPro && thisMonthInvoiceCount >= freeLimit;
@@ -221,7 +222,7 @@ export default function Dashboard() {
         .status-badge { display: inline-flex; align-items: center; gap: 5px; padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: 500; cursor: pointer; border: none; transition: opacity 0.15s; }
         .status-badge:hover { opacity: 0.8; }
         .status-hint { font-size: 11px; color: #9ca3af; margin-top: 3px; }
-        .quick-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 32px; }
+        .quick-actions { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-bottom: 32px; }
         .action-card { background: #fff; border: 1px solid #e5e9f5; border-radius: 12px; padding: 20px 24px; display: flex; align-items: center; gap: 16px; text-decoration: none; transition: all 0.15s; cursor: pointer; }
         .action-card:hover { border-color: #2563eb; box-shadow: 0 0 0 3px rgba(37,99,235,0.08); }
         .action-icon { width: 42px; height: 42px; border-radius: 10px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
@@ -299,6 +300,7 @@ export default function Dashboard() {
             <a href="/quote-editor" className="nav-item"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="9" y1="13" x2="15" y2="13"/></svg>New Quote</a>
             <a href="/receipt-editor" className="nav-item"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>New Receipt</a>
             <a href="/reports" className="nav-item"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="9" y1="13" x2="15" y2="13"/><line x1="9" y1="17" x2="15" y2="17"/></svg>Reports</a>
+            <a href="/gstr1" className="nav-item"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>GST Filing</a>
             <div className="nav-label">Documents</div>
             <a href="/dashboard" className="nav-item"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>Invoices</a>
             <a href="/quotes" className="nav-item"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>Quotes</a>
@@ -389,6 +391,15 @@ export default function Dashboard() {
                 <div className="action-sub">{atLimit ? '⚠ Limit reached — upgrade to continue' : 'Generate a GST-compliant invoice'}</div>
               </div>
             </div>
+            <a href="/gstr1" className="action-card">
+              <div className="action-icon" style={{ background: '#ecfdf5' }}>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#16a34a" strokeWidth="2"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
+              </div>
+              <div>
+                <div className="action-title">GST Filing</div>
+                <div className="action-sub">{thisMonthGST > 0 ? `Rs. ${Math.round(thisMonthGST).toLocaleString('en-IN')} output tax this month` : 'GSTR-1 & GSTR-3B ready to export'}</div>
+              </div>
+            </a>
             <a href="/profile" className="action-card">
               <div className="action-icon" style={{ background: '#f5f3ff' }}>
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#7c3aed" strokeWidth="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
