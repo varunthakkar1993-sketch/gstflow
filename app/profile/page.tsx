@@ -4,6 +4,7 @@ import { useEffect, useState, useRef } from 'react';
 import { onAuthStateChanged } from 'firebase/auth';
 import { auth, db } from '../../lib/firebase';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
+import { validateEmail, validateMobile, validateGSTIN, validatePincode, normalizeGSTIN } from '../../lib/validators';
 
 export default function ProfilePage() {
   const [user, setUser] = useState<any>(null);
@@ -32,8 +33,21 @@ export default function ProfilePage() {
     });
   }, []);
 
+  const [errors, setErrors] = useState<Record<string, string>>({});
+
+  const fieldError = (name: string, value: string): string => {
+    if (name === 'gstin') return validateGSTIN(value);
+    if (name === 'phone') return validateMobile(value);
+    if (name === 'email') return validateEmail(value);
+    if (name === 'pincode') return validatePincode(value);
+    return '';
+  };
+
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setProfile({ ...profile, [e.target.name]: e.target.value });
+    const { name, value } = e.target;
+    setProfile({ ...profile, [name]: value });
+    const err = fieldError(name, value);
+    setErrors(prev => ({ ...prev, [name]: err }));
   };
 
   const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -50,8 +64,17 @@ export default function ProfilePage() {
   };
 
   const handleSave = async () => {
+    const newErrors: Record<string, string> = {
+      gstin: validateGSTIN(profile.gstin),
+      phone: validateMobile(profile.phone),
+      email: validateEmail(profile.email),
+      pincode: validatePincode(profile.pincode),
+    };
+    setErrors(newErrors);
+    if (Object.values(newErrors).some(Boolean)) return;
+
     setSaving(true);
-    await setDoc(doc(db, 'profiles', user.uid), profile);
+    await setDoc(doc(db, 'profiles', user.uid), { ...profile, gstin: normalizeGSTIN(profile.gstin) });
     setSaving(false); setSaved(true);
     setTimeout(() => setSaved(false), 3000);
   };
@@ -92,6 +115,8 @@ export default function ProfilePage() {
         .field label { display: block; font-size: 12.5px; font-weight: 500; color: #374151; margin-bottom: 6px; }
         .field input { width: 100%; padding: 10px 14px; border: 1.5px solid #e5e9f5; border-radius: 8px; font-size: 14px; font-family: 'DM Sans', sans-serif; color: #111827; background: #fff; transition: border-color 0.15s; outline: none; }
         .field input:focus { border-color: #2563eb; box-shadow: 0 0 0 3px rgba(37,99,235,0.08); }
+        .field input.invalid { border-color: #dc2626; }
+        .field-error { color: #dc2626; font-size: 12px; margin-top: 5px; }
         .logo-upload-area { border: 2px dashed #e5e9f5; border-radius: 10px; padding: 28px; text-align: center; cursor: pointer; transition: all 0.15s; }
         .logo-upload-area:hover { border-color: #2563eb; background: #f8faff; }
         .logo-preview { max-width: 160px; max-height: 70px; object-fit: contain; margin: 0 auto 12px; display: block; }
@@ -230,11 +255,11 @@ export default function ProfilePage() {
                 <div className="field"><label>Owner / Freelancer Name</label><input name="ownerName" value={profile.ownerName} onChange={handleChange} placeholder="Varun Thakkar" /></div>
               </div>
               <div className="form-row">
-                <div className="field"><label>GSTIN</label><input name="gstin" value={profile.gstin} onChange={handleChange} placeholder="29AAABC1234D1Z5" /></div>
-                <div className="field"><label>Phone</label><input name="phone" value={profile.phone} onChange={handleChange} placeholder="+91 98765 43210" /></div>
+                <div className="field"><label>GSTIN</label><input name="gstin" value={profile.gstin} onChange={handleChange} placeholder="29AAABC1234D1Z5" className={errors.gstin ? 'invalid' : ''} />{errors.gstin && <div className="field-error">{errors.gstin}</div>}</div>
+                <div className="field"><label>Phone</label><input name="phone" value={profile.phone} onChange={handleChange} placeholder="+91 98765 43210" className={errors.phone ? 'invalid' : ''} />{errors.phone && <div className="field-error">{errors.phone}</div>}</div>
               </div>
               <div className="form-row single">
-                <div className="field"><label>Business Email</label><input name="email" value={profile.email} onChange={handleChange} placeholder="you@business.com" /></div>
+                <div className="field"><label>Business Email</label><input name="email" value={profile.email} onChange={handleChange} placeholder="you@business.com" className={errors.email ? 'invalid' : ''} />{errors.email && <div className="field-error">{errors.email}</div>}</div>
               </div>
               <div className="form-row single">
                 <div className="field"><label>Address</label><input name="address" value={profile.address} onChange={handleChange} placeholder="123, Street Name, Area" /></div>
@@ -242,7 +267,7 @@ export default function ProfilePage() {
               <div className="form-row three">
                 <div className="field"><label>City</label><input name="city" value={profile.city} onChange={handleChange} placeholder="Mumbai" /></div>
                 <div className="field"><label>State</label><input name="state" value={profile.state} onChange={handleChange} placeholder="Maharashtra" /></div>
-                <div className="field"><label>Pincode</label><input name="pincode" value={profile.pincode} onChange={handleChange} placeholder="400001" /></div>
+                <div className="field"><label>Pincode</label><input name="pincode" value={profile.pincode} onChange={handleChange} placeholder="400001" className={errors.pincode ? 'invalid' : ''} />{errors.pincode && <div className="field-error">{errors.pincode}</div>}</div>
               </div>
             </div>
           </div>

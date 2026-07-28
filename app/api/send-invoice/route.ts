@@ -20,8 +20,8 @@ export async function POST(req: NextRequest) {
     const { to, subject, invoiceNumber, clientName, businessName, total, date, pdfBase64, docType } = await req.json();
 
     const type = docType || 'invoice';
-    const label = type === 'receipt' ? 'Receipt' : 'Invoice';
-    const lowerLabel = type === 'receipt' ? 'receipt' : 'invoice';
+    const label = type === 'receipt' ? 'Receipt' : type === 'quote' ? 'Quote' : 'Invoice';
+    const lowerLabel = type === 'receipt' ? 'receipt' : type === 'quote' ? 'quote' : 'invoice';
 
     await sgMail.send({
       to,

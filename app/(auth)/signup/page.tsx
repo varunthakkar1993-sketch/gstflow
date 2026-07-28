@@ -1,6 +1,6 @@
 'use client';
 import { useState } from 'react';
-import { createUserWithEmailAndPassword } from 'firebase/auth';
+import { createUserWithEmailAndPassword, GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
 import { auth } from '../../../lib/firebase';
 import posthog from 'posthog-js';
 export default function Signup() {
@@ -31,6 +31,24 @@ export default function Signup() {
       setLoading(false);
     }
   };
+
+  const handleGoogle = async () => {
+    setLoading(true);
+    setError('');
+    try {
+      const credential = await signInWithPopup(auth, new GoogleAuthProvider());
+      posthog.identify(credential.user.uid, { email: credential.user.email });
+      posthog.capture('user_signed_up', { method: 'google', email: credential.user.email });
+      window.location.href = '/dashboard';
+    } catch (err: any) {
+      if (err?.code !== 'auth/popup-closed-by-user' && err?.code !== 'auth/cancelled-popup-request') {
+        posthog.captureException(err);
+        setError('Google sign-in failed. Please try again.');
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
   return (
     <>
       <style>{`
@@ -47,6 +65,11 @@ export default function Signup() {
         .auth-btn { width: 100%; background: #2563eb; color: #fff; padding: 13px; border: none; border-radius: 10px; font-size: 15px; font-weight: 600; font-family: 'DM Sans', sans-serif; cursor: pointer; transition: background 0.15s; }
         .auth-btn:hover { background: #1d4ed8; }
         .auth-btn:disabled { opacity: 0.6; cursor: not-allowed; }
+        .auth-divider { display: flex; align-items: center; gap: 12px; margin: 20px 0; color: #9ca3af; font-size: 12.5px; }
+        .auth-divider::before, .auth-divider::after { content: ''; flex: 1; height: 1px; background: #e5e9f5; }
+        .google-btn { width: 100%; background: #fff; color: #374151; padding: 12px; border: 1.5px solid #e5e9f5; border-radius: 10px; font-size: 14.5px; font-weight: 500; font-family: 'DM Sans', sans-serif; cursor: pointer; transition: all 0.15s; display: flex; align-items: center; justify-content: center; gap: 10px; }
+        .google-btn:hover { border-color: #cbd5e1; background: #f8faff; }
+        .google-btn:disabled { opacity: 0.6; cursor: not-allowed; }
         .auth-footer { text-align: center; margin-top: 24px; font-size: 13.5px; color: #6b7280; }
         .auth-footer a { color: #2563eb; font-weight: 500; text-decoration: none; }
         .auth-footer a:hover { text-decoration: underline; }
@@ -72,6 +95,11 @@ export default function Signup() {
             {loading ? 'Creating account...' : 'Get Started Free'}
           </button>
         </form>
+        <div className="auth-divider">or</div>
+        <button type="button" onClick={handleGoogle} disabled={loading} className="google-btn">
+          <svg width="18" height="18" viewBox="0 0 18 18"><path fill="#4285F4" d="M17.64 9.2c0-.64-.06-1.25-.16-1.84H9v3.48h4.84a4.14 4.14 0 0 1-1.8 2.72v2.26h2.92c1.71-1.57 2.68-3.89 2.68-6.62z"/><path fill="#34A853" d="M9 18c2.43 0 4.47-.8 5.96-2.18l-2.92-2.26c-.8.54-1.84.86-3.04.86-2.34 0-4.32-1.58-5.03-3.7H.96v2.34A9 9 0 0 0 9 18z"/><path fill="#FBBC05" d="M3.97 10.72a5.4 5.4 0 0 1 0-3.44V4.94H.96a9 9 0 0 0 0 8.12l3.01-2.34z"/><path fill="#EA4335" d="M9 3.58c1.32 0 2.5.45 3.44 1.35l2.58-2.58C13.46.89 11.43 0 9 0A9 9 0 0 0 .96 4.94l3.01 2.34C4.68 5.16 6.66 3.58 9 3.58z"/></svg>
+          Continue with Google
+        </button>
         <p className="auth-footer">
           Already have an account? <a href="/login">Log in</a>
         </p>

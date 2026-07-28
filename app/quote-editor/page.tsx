@@ -6,27 +6,38 @@ import { auth, db } from '../../lib/firebase';
 import { collection, addDoc, serverTimestamp, doc, getDoc, query, where, getCountFromServer } from 'firebase/firestore';
 import jsPDF from 'jspdf';
 import posthog from 'posthog-js';
+import { validateEmail, validateGSTIN, normalizeGSTIN } from '../../lib/validators';
 
-export default function ReceiptEditor() {
+type Item = { description: string; amount: string };
+
+export default function QuoteEditor() {
   const [user, setUser] = useState<any>(null);
   const [showMenu, setShowMenu] = useState(false);
   const [loading, setLoading] = useState(false);
   const [profile, setProfile] = useState<any>(null);
-  const [receiptSaved, setReceiptSaved] = useState(false);
+  const [quoteSaved, setQuoteSaved] = useState(false);
+  const [savedId, setSavedId] = useState('');
   const [pdfBase64, setPdfBase64] = useState('');
   const [sending, setSending] = useState(false);
 
-  const [receiptData, setReceiptData] = useState({
-    receiptNumber: '',
+  const defaultValidUntil = () => {
+    const d = new Date();
+    d.setDate(d.getDate() + 15);
+    return d.toISOString().split('T')[0];
+  };
+
+  const [quoteData, setQuoteData] = useState({
+    quoteNumber: '',
     date: new Date().toISOString().split('T')[0],
+    validUntil: defaultValidUntil(),
     clientName: '',
     clientEmail: '',
     clientAddress: '',
-    invoiceRef: '',
-    amount: '',
-    paymentMode: 'UPI',
+    clientGSTIN: '',
     notes: '',
   });
+  const [items, setItems] = useState<Item[]>([{ description: '', amount: '' }]);
+  const [errors, setErrors] = useState<{ clientEmail?: string; clientGSTIN?: string }>({});
 
   useEffect(() => {
     onAuthStateChanged(auth, async (currentUser) => {
@@ -34,81 +45,62 @@ export default function ReceiptEditor() {
       setUser(currentUser);
       const profileSnap = await getDoc(doc(db, 'profiles', currentUser.uid));
       if (profileSnap.exists()) setProfile(profileSnap.data());
-      const q = query(collection(db, 'receipts'), where('userId', '==', currentUser.uid));
+      const q = query(collection(db, 'quotes'), where('userId', '==', currentUser.uid));
       const countSnap = await getCountFromServer(q);
       const count = countSnap.data().count + 1;
-      const receiptNumber = `RCP-${String(count).padStart(3, '0')}`;
-      setReceiptData({
-        receiptNumber,
-        date: new Date().toISOString().split('T')[0],
-        clientName: '',
-        clientEmail: '',
-        clientAddress: '',
-        invoiceRef: '',
-        amount: '',
-        paymentMode: 'UPI',
-        notes: '',
-      });
+      setQuoteData(prev => ({ ...prev, quoteNumber: `QUO-${String(count).padStart(3, '0')}` }));
     });
   }, []);
 
-  // Pre-fill from a paid invoice via ?from_invoice=<docId>
+  // Pre-fill from a template via ?description=&notes=
   useEffect(() => {
     if (typeof window === 'undefined') return;
     const params = new URLSearchParams(window.location.search);
-    const fromInvoice = params.get('from_invoice');
-    if (fromInvoice) {
-      import('firebase/firestore').then(({ doc, getDoc }) => {
-        getDoc(doc(db, 'invoices', fromInvoice)).then(snap => {
-          if (snap.exists()) {
-            const inv = snap.data();
-            setReceiptData(prev => ({
-              ...prev,
-              clientName: inv.clientName || '',
-              clientEmail: inv.clientEmail || '',
-              clientAddress: inv.clientAddress || '',
-              invoiceRef: inv.invoiceNumber || '',
-              amount: String(inv.total || ''),
-            }));
-          }
-        });
-      });
-    }
+    const description = params.get('description') || '';
+    const notes = params.get('notes') || '';
+    if (description) setItems([{ description, amount: '' }]);
+    if (notes) setQuoteData(prev => ({ ...prev, notes }));
   }, []);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
-    setReceiptData({ ...receiptData, [e.target.name]: e.target.value });
+    const { name, value } = e.target;
+    setQuoteData({ ...quoteData, [name]: value });
+    if (name === 'clientEmail') setErrors(p => ({ ...p, clientEmail: validateEmail(value) }));
+    if (name === 'clientGSTIN') setErrors(p => ({ ...p, clientGSTIN: validateGSTIN(value) }));
   };
 
-  const amountReceived = parseFloat(receiptData.amount) || 0;
+  const updateItem = (i: number, field: keyof Item, value: string) => {
+    setItems(prev => prev.map((it, idx) => idx === i ? { ...it, [field]: value } : it));
+  };
+  const addItem = () => setItems(prev => [...prev, { description: '', amount: '' }]);
+  const removeItem = (i: number) => setItems(prev => prev.length === 1 ? prev : prev.filter((_, idx) => idx !== i));
+
+  const total = items.reduce((sum, it) => sum + (parseFloat(it.amount) || 0), 0);
 
   const buildPDF = async () => {
     const doc2 = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
     const pageWidth = doc2.internal.pageSize.getWidth();
     const pageHeight = doc2.internal.pageSize.getHeight();
 
-    // Dark header band
-    doc2.setFillColor(15, 31, 92);
+    // Purple header band (quote theme)
+    doc2.setFillColor(76, 29, 149);
     doc2.rect(0, 0, pageWidth, 42, 'F');
-
     if (profile?.logoBase64) {
       try {
         const ext = profile.logoBase64.startsWith('data:image/png') ? 'PNG' : 'JPEG';
         doc2.addImage(profile.logoBase64, ext, 12, 8, 0, 26);
       } catch (e) {}
     }
-
     doc2.setFontSize(22); doc2.setFont('helvetica', 'bold');
     doc2.setTextColor(255, 255, 255);
-    doc2.text('RECEIPT', pageWidth - 14, 24, { align: 'right' });
+    doc2.text('QUOTE', pageWidth - 14, 24, { align: 'right' });
     doc2.setFontSize(8); doc2.setFont('helvetica', 'normal');
-    doc2.setTextColor(180, 195, 230);
-    doc2.text(`${receiptData.receiptNumber}  ·  ${receiptData.date}`, pageWidth - 14, 32, { align: 'right' });
+    doc2.setTextColor(210, 190, 255);
+    doc2.text(`${quoteData.quoteNumber}  ·  Valid until ${quoteData.validUntil}`, pageWidth - 14, 32, { align: 'right' });
 
-    // Business info
     let y = 54;
     doc2.setFontSize(13); doc2.setFont('helvetica', 'bold');
-    doc2.setTextColor(15, 31, 92);
+    doc2.setTextColor(76, 29, 149);
     doc2.text(profile?.businessName || 'Your Business', 14, y); y += 6;
     doc2.setFontSize(8); doc2.setFont('helvetica', 'normal');
     doc2.setTextColor(100, 110, 130);
@@ -117,115 +109,110 @@ export default function ReceiptEditor() {
     if (profile?.phone) { doc2.text(`Phone: ${profile.phone}`, 14, y); y += 5; }
 
     y += 3;
-    doc2.setDrawColor(37, 99, 235);
-    doc2.setLineWidth(0.5);
-    doc2.line(14, y, pageWidth - 14, y);
-    y += 8;
+    doc2.setDrawColor(124, 58, 237); doc2.setLineWidth(0.5);
+    doc2.line(14, y, pageWidth - 14, y); y += 8;
 
-    // Received From / Receipt Details two columns
-    doc2.setFontSize(7.5); doc2.setFont('helvetica', 'bold');
-    doc2.setTextColor(100, 110, 130);
-    doc2.text('RECEIVED FROM', 14, y);
-    doc2.text('RECEIPT DETAILS', pageWidth / 2, y);
-    y += 5;
-
-    doc2.setFont('helvetica', 'bold'); doc2.setFontSize(9.5);
-    doc2.setTextColor(15, 31, 92);
-    doc2.text(receiptData.clientName || 'Client', 14, y);
-    doc2.setFont('helvetica', 'normal'); doc2.setFontSize(8.5);
-    doc2.setTextColor(60, 70, 90);
-    doc2.text(`Receipt #: ${receiptData.receiptNumber}`, pageWidth / 2, y); y += 5;
+    doc2.setFontSize(7.5); doc2.setFont('helvetica', 'bold'); doc2.setTextColor(100, 110, 130);
+    doc2.text('PREPARED FOR', 14, y); doc2.text('QUOTE DETAILS', pageWidth / 2, y); y += 5;
+    doc2.setFont('helvetica', 'bold'); doc2.setFontSize(9.5); doc2.setTextColor(15, 31, 92);
+    doc2.text(quoteData.clientName || 'Client', 14, y);
+    doc2.setFont('helvetica', 'normal'); doc2.setFontSize(8.5); doc2.setTextColor(60, 70, 90);
+    doc2.text(`Quote #: ${quoteData.quoteNumber}`, pageWidth / 2, y); y += 5;
     doc2.setTextColor(100, 110, 130); doc2.setFontSize(8);
-    if (receiptData.clientEmail) { doc2.text(receiptData.clientEmail, 14, y); }
+    if (quoteData.clientEmail) doc2.text(quoteData.clientEmail, 14, y);
     doc2.setTextColor(60, 70, 90);
-    doc2.text(`Date: ${receiptData.date}`, pageWidth / 2, y); y += 5;
+    doc2.text(`Valid Until: ${quoteData.validUntil}`, pageWidth / 2, y); y += 5;
     doc2.setTextColor(100, 110, 130);
-    if (receiptData.clientAddress) { doc2.text(receiptData.clientAddress, 14, y); }
-    if (receiptData.invoiceRef) {
-      doc2.setTextColor(60, 70, 90);
-      doc2.text(`Against Invoice: ${receiptData.invoiceRef}`, pageWidth / 2, y);
-    }
+    if (quoteData.clientAddress) { doc2.text(quoteData.clientAddress, 14, y); y += 5; }
+    if (quoteData.clientGSTIN) { doc2.text(`GSTIN: ${quoteData.clientGSTIN}`, 14, y); y += 5; }
     y += 5;
-    if (receiptData.clientAddress || receiptData.invoiceRef) y += 3;
 
-    // Payment confirmation band
-    y += 6;
-    doc2.setFillColor(240, 244, 255);
-    doc2.rect(14, y - 4, pageWidth - 28, 22, 'F');
-    doc2.setFontSize(8); doc2.setFont('helvetica', 'normal');
-    doc2.setTextColor(100, 110, 130);
-    doc2.text('Received with thanks the sum of', 18, y + 4);
-    doc2.setFontSize(15); doc2.setFont('helvetica', 'bold');
-    doc2.setTextColor(15, 31, 92);
-    doc2.text(`Rs. ${amountReceived.toLocaleString('en-IN')}`, 18, y + 13);
-    doc2.setFontSize(8); doc2.setFont('helvetica', 'normal');
-    doc2.setTextColor(100, 110, 130);
-    doc2.text('Payment Mode', pageWidth - 18, y + 4, { align: 'right' });
-    doc2.setFontSize(10); doc2.setFont('helvetica', 'bold');
-    doc2.setTextColor(15, 31, 92);
-    doc2.text(receiptData.paymentMode, pageWidth - 18, y + 13, { align: 'right' });
-    y += 30;
+    doc2.setFillColor(245, 240, 255);
+    doc2.rect(14, y - 4, pageWidth - 28, 10, 'F');
+    doc2.setFontSize(8); doc2.setFont('helvetica', 'bold'); doc2.setTextColor(76, 29, 149);
+    doc2.text('DESCRIPTION', 18, y + 2); doc2.text('AMOUNT (Rs.)', pageWidth - 18, y + 2, { align: 'right' }); y += 12;
 
-    // Notes
-    if (receiptData.notes) {
-      doc2.setFontSize(7.5); doc2.setFont('helvetica', 'bold');
-      doc2.setTextColor(100, 110, 130);
+    items.forEach((item) => {
+      if (!item.description && !item.amount) return;
+      doc2.setFont('helvetica', 'normal'); doc2.setFontSize(9); doc2.setTextColor(30, 40, 60);
+      const lines = doc2.splitTextToSize(item.description || '—', pageWidth - 70);
+      doc2.text(lines, 18, y);
+      doc2.text((parseFloat(item.amount) || 0).toLocaleString('en-IN'), pageWidth - 18, y, { align: 'right' });
+      y += Math.max(8, lines.length * 5 + 3);
+    });
+
+    y += 2;
+    doc2.setFillColor(76, 29, 149); doc2.rect(14, y, pageWidth - 28, 12, 'F');
+    doc2.setFontSize(11); doc2.setFont('helvetica', 'bold'); doc2.setTextColor(255, 255, 255);
+    doc2.text('TOTAL ESTIMATE', 18, y + 8);
+    doc2.text(`Rs. ${total.toLocaleString('en-IN')}`, pageWidth - 18, y + 8, { align: 'right' }); y += 20;
+
+    if (quoteData.notes) {
+      doc2.setFontSize(7.5); doc2.setFont('helvetica', 'bold'); doc2.setTextColor(100, 110, 130);
       doc2.text('NOTES', 14, y); y += 5;
-      doc2.setFont('helvetica', 'normal'); doc2.setFontSize(8.5);
-      doc2.setTextColor(30, 40, 60);
-      doc2.text(receiptData.notes, 14, y); y += 10;
+      doc2.setFont('helvetica', 'normal'); doc2.setFontSize(8.5); doc2.setTextColor(60, 70, 90);
+      const nlines = doc2.splitTextToSize(quoteData.notes, pageWidth - 28);
+      doc2.text(nlines, 14, y);
     }
 
-    // Footer band
-    doc2.setFillColor(240, 244, 255);
+    doc2.setFillColor(245, 240, 255);
     doc2.rect(0, pageHeight - 14, pageWidth, 14, 'F');
-    doc2.setFontSize(8); doc2.setFont('helvetica', 'normal');
-    doc2.setTextColor(100, 110, 130);
-    doc2.text('This is a computer-generated receipt.', 14, pageHeight - 6);
+    doc2.setFontSize(8); doc2.setFont('helvetica', 'normal'); doc2.setTextColor(100, 110, 130);
+    doc2.text('This is an estimate. Prices are subject to change.', 14, pageHeight - 6);
     doc2.text('Made with Paavti.in', pageWidth - 14, pageHeight - 6, { align: 'right' });
-
     return doc2;
   };
 
-  const generateAndSavePDF = async () => {
+  const generateAndSave = async () => {
+    // Validation
+    const emailErr = validateEmail(quoteData.clientEmail);
+    const gstinErr = validateGSTIN(quoteData.clientGSTIN);
+    setErrors({ clientEmail: emailErr, clientGSTIN: gstinErr });
+    if (emailErr || gstinErr) return;
+    if (!quoteData.clientName.trim()) { alert('Please enter a client name.'); return; }
+    const validItems = items.filter(it => it.description.trim() || it.amount);
+    if (validItems.length === 0) { alert('Add at least one line item.'); return; }
+
     setLoading(true);
     try {
       const doc2 = await buildPDF();
-      doc2.save(`Paavti-${receiptData.receiptNumber}.pdf`);
+      doc2.save(`Paavti-${quoteData.quoteNumber}.pdf`);
       const base64 = doc2.output('datauristring').split(',')[1];
       setPdfBase64(base64);
-      await addDoc(collection(db, 'receipts'), {
+      const ref = await addDoc(collection(db, 'quotes'), {
         userId: user.uid,
-        receiptNumber: receiptData.receiptNumber,
-        date: receiptData.date,
-        clientName: receiptData.clientName,
-        clientEmail: receiptData.clientEmail,
-        clientAddress: receiptData.clientAddress,
-        invoiceRef: receiptData.invoiceRef,
-        amount: amountReceived,
-        paymentMode: receiptData.paymentMode,
-        notes: receiptData.notes,
+        quoteNumber: quoteData.quoteNumber,
+        date: quoteData.date,
+        validUntil: quoteData.validUntil,
+        clientName: quoteData.clientName,
+        clientEmail: quoteData.clientEmail,
+        clientAddress: quoteData.clientAddress,
+        clientGSTIN: normalizeGSTIN(quoteData.clientGSTIN),
+        items: validItems.map(it => ({ description: it.description, amount: parseFloat(it.amount) || 0 })),
+        notes: quoteData.notes,
+        total,
+        status: 'draft',
         createdAt: serverTimestamp(),
       });
-      posthog.capture('receipt_generated', {
-        receipt_number: receiptData.receiptNumber,
-        amount: amountReceived,
-        payment_mode: receiptData.paymentMode,
-        has_invoice_ref: !!receiptData.invoiceRef,
-        has_client_email: !!receiptData.clientEmail,
+      setSavedId(ref.id);
+      posthog.capture('quote_generated', {
+        quote_number: quoteData.quoteNumber,
+        total,
+        line_items: validItems.length,
+        has_client_email: !!quoteData.clientEmail,
       });
-      setReceiptSaved(true);
+      setQuoteSaved(true);
     } catch (error) {
       console.error(error);
       posthog.captureException(error);
-      alert('Failed to generate receipt.');
+      alert('Failed to generate quote.');
     } finally {
       setLoading(false);
     }
   };
 
   const sendEmail = async () => {
-    if (!receiptData.clientEmail) { alert('Please enter client email first.'); return; }
+    if (!quoteData.clientEmail) { alert('Please enter client email first.'); return; }
     setSending(true);
     try {
       const idToken = await auth.currentUser?.getIdToken();
@@ -233,18 +220,20 @@ export default function ReceiptEditor() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${idToken}` },
         body: JSON.stringify({
-          to: receiptData.clientEmail,
-          invoiceNumber: receiptData.receiptNumber,
-          clientName: receiptData.clientName,
+          to: quoteData.clientEmail,
+          subject: `Quote ${quoteData.quoteNumber} from ${profile?.businessName || 'Paavti'}`,
+          invoiceNumber: quoteData.quoteNumber,
+          clientName: quoteData.clientName,
           businessName: profile?.businessName || 'Paavti',
-          total: amountReceived.toLocaleString('en-IN'),
-          date: receiptData.date,
+          total: total.toLocaleString('en-IN'),
+          date: quoteData.date,
           pdfBase64,
+          docType: 'quote',
         }),
       });
       if (res.ok) {
-        posthog.capture('receipt_emailed', { receipt_number: receiptData.receiptNumber, amount: amountReceived });
-        alert('✅ Receipt emailed successfully!');
+        posthog.capture('quote_emailed', { quote_number: quoteData.quoteNumber, total });
+        alert('✅ Quote emailed successfully!');
       } else {
         alert('Failed to send email.');
       }
@@ -253,8 +242,8 @@ export default function ReceiptEditor() {
   };
 
   const sendWhatsApp = () => {
-    const msg = encodeURIComponent(`Hi ${receiptData.clientName}, please find your payment receipt ${receiptData.receiptNumber} for Rs. ${amountReceived.toLocaleString('en-IN')} from ${profile?.businessName || 'Paavti'} dated ${receiptData.date}. Thank you!`);
-    posthog.capture('receipt_whatsapped', { receipt_number: receiptData.receiptNumber, amount: amountReceived });
+    const msg = encodeURIComponent(`Hi ${quoteData.clientName}, please find your quote ${quoteData.quoteNumber} for Rs. ${total.toLocaleString('en-IN')} from ${profile?.businessName || 'Paavti'}. Valid until ${quoteData.validUntil}.`);
+    posthog.capture('quote_whatsapped', { quote_number: quoteData.quoteNumber, total });
     window.open(`https://wa.me/?text=${msg}`, '_blank');
   };
 
@@ -295,7 +284,17 @@ export default function ReceiptEditor() {
         .field input, .field textarea, .field select { width: 100%; padding: 10px 14px; border: 1.5px solid #e5e9f5; border-radius: 8px; font-size: 14px; font-family: 'DM Sans', sans-serif; color: #111827; background: #fff; transition: border-color 0.15s; outline: none; }
         .field input:focus, .field textarea:focus, .field select:focus { border-color: #2563eb; box-shadow: 0 0 0 3px rgba(37,99,235,0.08); }
         .field input.readonly { background: #f8faff; color: #6b7280; }
+        .field input.invalid { border-color: #dc2626; }
         .field textarea { resize: vertical; min-height: 80px; }
+        .field-error { color: #dc2626; font-size: 12px; margin-top: 5px; }
+        .item-row { display: grid; grid-template-columns: 1fr 150px 38px; gap: 10px; align-items: center; margin-bottom: 10px; }
+        .item-row input { width: 100%; padding: 10px 14px; border: 1.5px solid #e5e9f5; border-radius: 8px; font-size: 14px; font-family: 'DM Sans', sans-serif; color: #111827; outline: none; }
+        .item-row input:focus { border-color: #2563eb; box-shadow: 0 0 0 3px rgba(37,99,235,0.08); }
+        .item-remove { height: 40px; background: #fef2f2; color: #dc2626; border: none; border-radius: 8px; cursor: pointer; font-size: 18px; line-height: 1; }
+        .item-remove:hover { background: #fee2e2; }
+        .item-remove:disabled { opacity: 0.4; cursor: not-allowed; }
+        .add-item { width: 100%; background: #f0f4ff; color: #2563eb; border: 1.5px dashed #bcd0f5; padding: 10px; border-radius: 8px; cursor: pointer; font-weight: 500; font-size: 13.5px; font-family: 'DM Sans', sans-serif; }
+        .add-item:hover { background: #e5edff; }
         .summary-card { background: #fff; border-radius: 12px; border: 1px solid #e5e9f5; position: sticky; top: 24px; }
         .summary-header { padding: 16px 24px; border-bottom: 1px solid #f0f4ff; }
         .summary-header h3 { font-family: 'Lora', serif; font-size: 16px; color: #0f1f5c; font-weight: 600; }
@@ -307,9 +306,9 @@ export default function ReceiptEditor() {
         .summary-divider { border: none; border-top: 1px solid #f0f4ff; margin: 12px 0; }
         .summary-total { display: flex; justify-content: space-between; align-items: center; padding: 14px 0 0; }
         .summary-total-label { font-size: 14px; font-weight: 600; color: #0f1f5c; }
-        .summary-total-value { font-family: 'Lora', serif; font-size: 22px; font-weight: 600; color: #2563eb; }
-        .btn-primary { width: 100%; background: #2563eb; color: #fff; border: none; padding: 13px; border-radius: 9px; font-size: 14px; font-weight: 600; font-family: 'DM Sans', sans-serif; cursor: pointer; transition: background 0.15s; margin-top: 20px; }
-        .btn-primary:hover { background: #1d4ed8; }
+        .summary-total-value { font-family: 'Lora', serif; font-size: 22px; font-weight: 600; color: #7c3aed; }
+        .btn-primary { width: 100%; background: #7c3aed; color: #fff; border: none; padding: 13px; border-radius: 9px; font-size: 14px; font-weight: 600; font-family: 'DM Sans', sans-serif; cursor: pointer; transition: background 0.15s; margin-top: 20px; }
+        .btn-primary:hover { background: #6d28d9; }
         .btn-primary:disabled { opacity: 0.6; cursor: not-allowed; }
         .success-box { background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 9px; padding: 14px; text-align: center; color: #16a34a; font-size: 13.5px; font-weight: 500; margin-top: 20px; }
         .action-btns { display: flex; flex-direction: column; gap: 10px; margin-top: 12px; }
@@ -317,26 +316,15 @@ export default function ReceiptEditor() {
         .btn-email:hover { background: #1d4ed8; }
         .btn-whatsapp { background: #16a34a; color: #fff; border: none; padding: 11px; border-radius: 9px; font-size: 13.5px; font-weight: 500; font-family: 'DM Sans', sans-serif; cursor: pointer; transition: background 0.15s; display: flex; align-items: center; justify-content: center; gap: 8px; }
         .btn-whatsapp:hover { background: #15803d; }
-        .btn-secondary { background: #f8faff; color: #374151; border: 1.5px solid #e5e9f5; padding: 11px; border-radius: 9px; font-size: 13.5px; font-weight: 500; font-family: 'DM Sans', sans-serif; cursor: pointer; transition: all 0.15s; display: flex; align-items: center; justify-content: center; gap: 8px; }
+        .btn-secondary { background: #f8faff; color: #374151; border: 1.5px solid #e5e9f5; padding: 11px; border-radius: 9px; font-size: 13.5px; font-weight: 500; font-family: 'DM Sans', sans-serif; cursor: pointer; transition: all 0.15s; display: flex; align-items: center; justify-content: center; gap: 8px; text-decoration: none; }
         .btn-secondary:hover { border-color: #2563eb; color: #2563eb; }
         .profile-missing { background: #fffbeb; border: 1px solid #fde68a; border-radius: 9px; padding: 12px 16px; font-size: 13px; color: #92400e; margin-bottom: 20px; }
         .profile-missing a { color: #2563eb; font-weight: 500; }
-      
-        .field label { font-size: 13.5px; }
-        .field input, .field textarea, .field select { font-size: 15px; }
-        th { font-size: 12px; }
-        td { font-size: 14px; }
-
-        
         .menu-toggle { display: none; background: none; border: none; color: #ffffff; font-size: 30px; cursor: pointer; padding: 4px 8px; }
         @media (max-width: 768px) {
-          .editor-root, .root { flex-direction: column; }
           .editor-root, .root { flex-direction: column; min-height: auto; }
           .sidebar { width: 100% !important; min-height: auto !important; position: relative !important; flex-direction: row !important; flex-wrap: wrap !important; align-items: center; top: auto !important; bottom: auto !important; left: auto !important; height: auto !important; z-index: auto !important; }
-          .sidebar-logo { padding: 14px 16px; border-bottom: none; }
-          .sidebar-logo h1 { font-size: 18px; }
-          .sidebar-logo p { display: none; }
-          .sidebar-logo { display: flex !important; align-items: center; width: 100%; gap: 12px; padding: 12px 16px !important; }
+          .sidebar-logo { display: flex !important; align-items: center; width: 100%; gap: 12px; padding: 12px 16px !important; border-bottom: none; }
           .sidebar-logo p { display: none; }
           .sidebar-logo img { height: 42px !important; }
           .menu-toggle { display: block !important; margin-left: auto; font-size: 32px; color: #ffffff !important; }
@@ -349,22 +337,11 @@ export default function ReceiptEditor() {
           .main { margin-left: 0 !important; padding: 16px !important; width: 100% !important; }
           .page-header { margin-bottom: 16px; }
           .page-header h2 { font-size: 22px; }
-          .page-header p { font-size: 13px; }
           .editor-grid { grid-template-columns: 1fr; }
           .form-row { grid-template-columns: 1fr; }
           .summary-card { position: static; }
-          .summary-grid { grid-template-columns: repeat(2, 1fr); gap: 10px; }
-          .stats-grid { grid-template-columns: 1fr; gap: 10px; }
-          .content-grid { grid-template-columns: 1fr; }
-          .controls { flex-direction: column; align-items: stretch; }
-          .controls select, .controls button { width: 100%; }
           .card-body { padding: 16px; }
           .card-header { padding: 12px 16px; }
-          table { font-size: 12px; }
-          th { font-size: 10px; padding: 8px 10px; }
-          td { font-size: 12.5px; padding: 10px; }
-          .action-btns { gap: 8px; }
-          .modal { width: 95vw; max-height: 90vh; overflow-y: auto; }
         }
       `}</style>
 
@@ -402,13 +379,13 @@ export default function ReceiptEditor() {
 
         <main className="main">
           <div className="page-header">
-            <h2>New Receipt</h2>
-            <p>Confirm a payment received against an invoice.</p>
+            <h2>New Quote</h2>
+            <p>Send a professional estimate to your client. Convert it to an invoice once accepted.</p>
           </div>
 
           {!profile && (
             <div className="profile-missing">
-              ⚠️ Business profile incomplete. <a href="/profile">Set it up here</a> so your receipts include your details.
+              ⚠️ Business profile incomplete. <a href="/profile">Set it up here</a> so your quotes include your details.
             </div>
           )}
 
@@ -416,26 +393,26 @@ export default function ReceiptEditor() {
             <div>
               <div className="card">
                 <div className="card-header">
-                  <div className="card-icon" style={{ background: '#eff6ff' }}>
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#2563eb" strokeWidth="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                  <div className="card-icon" style={{ background: '#f5f3ff' }}>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#7c3aed" strokeWidth="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
                   </div>
-                  <h3>Receipt Details</h3>
+                  <h3>Quote Details</h3>
                 </div>
                 <div className="card-body">
                   <div className="form-row">
                     <div className="field">
-                      <label>Receipt Number</label>
-                      <input name="receiptNumber" value={receiptData.receiptNumber} onChange={handleChange} className="readonly" readOnly />
+                      <label>Quote Number</label>
+                      <input name="quoteNumber" value={quoteData.quoteNumber} onChange={handleChange} className="readonly" readOnly />
                     </div>
                     <div className="field">
                       <label>Date</label>
-                      <input type="date" name="date" value={receiptData.date} onChange={handleChange} />
+                      <input type="date" name="date" value={quoteData.date} onChange={handleChange} />
                     </div>
                   </div>
                   <div className="form-row single">
                     <div className="field">
-                      <label>Against Invoice (optional)</label>
-                      <input name="invoiceRef" value={receiptData.invoiceRef} onChange={handleChange} placeholder="INV-001" />
+                      <label>Valid Until</label>
+                      <input type="date" name="validUntil" value={quoteData.validUntil} onChange={handleChange} />
                     </div>
                   </div>
                 </div>
@@ -452,17 +429,23 @@ export default function ReceiptEditor() {
                   <div className="form-row">
                     <div className="field">
                       <label>Client Name</label>
-                      <input name="clientName" value={receiptData.clientName} onChange={handleChange} placeholder="Acme Corp" />
+                      <input name="clientName" value={quoteData.clientName} onChange={handleChange} placeholder="Acme Corp" />
                     </div>
                     <div className="field">
                       <label>Client Email</label>
-                      <input type="email" name="clientEmail" value={receiptData.clientEmail} onChange={handleChange} placeholder="client@company.com" />
+                      <input type="email" name="clientEmail" value={quoteData.clientEmail} onChange={handleChange} placeholder="client@company.com" className={errors.clientEmail ? 'invalid' : ''} />
+                      {errors.clientEmail && <div className="field-error">{errors.clientEmail}</div>}
                     </div>
                   </div>
-                  <div className="form-row single">
+                  <div className="form-row">
                     <div className="field">
                       <label>Client Address</label>
-                      <input name="clientAddress" value={receiptData.clientAddress} onChange={handleChange} placeholder="Street, City, State, Pincode" />
+                      <input name="clientAddress" value={quoteData.clientAddress} onChange={handleChange} placeholder="Street, City, State, Pincode" />
+                    </div>
+                    <div className="field">
+                      <label>Client GSTIN (optional)</label>
+                      <input name="clientGSTIN" value={quoteData.clientGSTIN} onChange={handleChange} placeholder="27ABCDE1234F1Z5" className={errors.clientGSTIN ? 'invalid' : ''} />
+                      {errors.clientGSTIN && <div className="field-error">{errors.clientGSTIN}</div>}
                     </div>
                   </div>
                 </div>
@@ -470,33 +453,23 @@ export default function ReceiptEditor() {
 
               <div className="card">
                 <div className="card-header">
-                  <div className="card-icon" style={{ background: '#fff7ed' }}>
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#ea580c" strokeWidth="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+                  <div className="card-icon" style={{ background: '#eff6ff' }}>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#2563eb" strokeWidth="2"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
                   </div>
-                  <h3>Payment Details</h3>
+                  <h3>Line Items</h3>
                 </div>
                 <div className="card-body">
-                  <div className="form-row">
-                    <div className="field">
-                      <label>Amount Received (Rs.)</label>
-                      <input type="number" name="amount" value={receiptData.amount} onChange={handleChange} />
+                  {items.map((item, i) => (
+                    <div className="item-row" key={i}>
+                      <input value={item.description} onChange={e => updateItem(i, 'description', e.target.value)} placeholder="Description of work or product" />
+                      <input type="number" value={item.amount} onChange={e => updateItem(i, 'amount', e.target.value)} placeholder="Amount" />
+                      <button type="button" className="item-remove" onClick={() => removeItem(i)} disabled={items.length === 1} title="Remove">×</button>
                     </div>
-                    <div className="field">
-                      <label>Payment Mode</label>
-                      <select name="paymentMode" value={receiptData.paymentMode} onChange={handleChange}>
-                        <option value="UPI">UPI</option>
-                        <option value="Bank Transfer">Bank Transfer</option>
-                        <option value="Cash">Cash</option>
-                        <option value="Cheque">Cheque</option>
-                        <option value="Card">Card</option>
-                      </select>
-                    </div>
-                  </div>
-                  <div className="form-row single">
-                    <div className="field">
-                      <label>Notes (optional)</label>
-                      <textarea name="notes" value={receiptData.notes} onChange={handleChange} placeholder="e.g. Cheque no. 001234, partial payment, etc." />
-                    </div>
+                  ))}
+                  <button type="button" className="add-item" onClick={addItem}>+ Add line item</button>
+                  <div className="field" style={{ marginTop: 16, marginBottom: 0 }}>
+                    <label>Notes (optional)</label>
+                    <textarea name="notes" value={quoteData.notes} onChange={handleChange} placeholder="Payment terms, scope notes, or anything the client should know." />
                   </div>
                 </div>
               </div>
@@ -505,7 +478,7 @@ export default function ReceiptEditor() {
             <div>
               <div className="summary-card">
                 <div className="summary-header">
-                  <h3>Receipt Summary</h3>
+                  <h3>Quote Summary</h3>
                 </div>
                 <div className="summary-body">
                   {profile && (
@@ -517,42 +490,42 @@ export default function ReceiptEditor() {
                   )}
 
                   <div className="summary-inv-row">
-                    <span>Receipt</span>
-                    <span style={{ fontWeight: 600 }}>{receiptData.receiptNumber}</span>
+                    <span>Quote</span>
+                    <span style={{ fontWeight: 600 }}>{quoteData.quoteNumber}</span>
                   </div>
                   <div className="summary-inv-row">
                     <span>Date</span>
-                    <span>{receiptData.date}</span>
+                    <span>{quoteData.date}</span>
+                  </div>
+                  <div className="summary-inv-row">
+                    <span>Valid Until</span>
+                    <span>{quoteData.validUntil}</span>
                   </div>
                   <div className="summary-inv-row">
                     <span>Client</span>
-                    <span>{receiptData.clientName || '—'}</span>
+                    <span>{quoteData.clientName || '—'}</span>
                   </div>
                   <div className="summary-inv-row">
-                    <span>Against</span>
-                    <span>{receiptData.invoiceRef || '—'}</span>
-                  </div>
-                  <div className="summary-inv-row">
-                    <span>Mode</span>
-                    <span>{receiptData.paymentMode}</span>
+                    <span>Items</span>
+                    <span>{items.filter(it => it.description.trim() || it.amount).length}</span>
                   </div>
 
                   <hr className="summary-divider" />
 
                   <div className="summary-total">
-                    <div className="summary-total-label">Received</div>
-                    <div className="summary-total-value">Rs. {amountReceived.toLocaleString('en-IN')}</div>
+                    <div className="summary-total-label">Total Estimate</div>
+                    <div className="summary-total-value">Rs. {total.toLocaleString('en-IN')}</div>
                   </div>
 
-                  {!receiptSaved ? (
-                    <button onClick={generateAndSavePDF} disabled={loading} className="btn-primary">
-                      {loading ? 'Generating…' : '↓ Generate & Download PDF'}
+                  {!quoteSaved ? (
+                    <button onClick={generateAndSave} disabled={loading} className="btn-primary">
+                      {loading ? 'Generating…' : '↓ Generate & Download Quote'}
                     </button>
                   ) : (
                     <>
-                      <div className="success-box">✅ Receipt saved successfully!</div>
+                      <div className="success-box">✅ Quote saved successfully!</div>
                       <div className="action-btns">
-                        <button onClick={generateAndSavePDF} disabled={loading} className="btn-secondary">
+                        <button onClick={generateAndSave} disabled={loading} className="btn-secondary">
                           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
                           Download Again
                         </button>
@@ -564,9 +537,7 @@ export default function ReceiptEditor() {
                           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>
                           Send via WhatsApp
                         </button>
-                        <button onClick={() => window.location.href = '/dashboard'} className="btn-secondary">
-                          ← Back to Dashboard
-                        </button>
+                        <a href="/quotes" className="btn-secondary">← Back to Quotes</a>
                       </div>
                     </>
                   )}

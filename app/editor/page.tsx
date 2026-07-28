@@ -7,6 +7,7 @@ import { collection, addDoc, serverTimestamp, doc, getDoc, query, where, getCoun
 import jsPDF from 'jspdf';
 import QRCode from 'qrcode';
 import posthog from 'posthog-js';
+import { validateEmail, validateGSTIN, validateHSN, normalizeGSTIN } from '../../lib/validators';
 
 export default function InvoiceEditor() {
   const [user, setUser] = useState<any>(null);
@@ -97,8 +98,14 @@ export default function InvoiceEditor() {
     }
   }, []);
 
+  const [errors, setErrors] = useState<{ clientEmail?: string; clientGSTIN?: string; hsn?: string }>({});
+
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
-    setInvoiceData({ ...invoiceData, [e.target.name]: e.target.value });
+    const { name, value } = e.target;
+    setInvoiceData({ ...invoiceData, [name]: value });
+    if (name === 'clientEmail') setErrors(p => ({ ...p, clientEmail: validateEmail(value) }));
+    if (name === 'clientGSTIN') setErrors(p => ({ ...p, clientGSTIN: validateGSTIN(value) }));
+    if (name === 'hsn') setErrors(p => ({ ...p, hsn: validateHSN(value) }));
   };
 
   const subtotal = parseFloat(invoiceData.amount) || 0;
@@ -248,6 +255,14 @@ export default function InvoiceEditor() {
   };
 
   const generateAndSavePDF = async () => {
+    const newErrors = {
+      clientEmail: validateEmail(invoiceData.clientEmail),
+      clientGSTIN: validateGSTIN(invoiceData.clientGSTIN),
+      hsn: validateHSN(invoiceData.hsn),
+    };
+    setErrors(newErrors);
+    if (Object.values(newErrors).some(Boolean)) return;
+
     setLoading(true);
     try {
       const doc2 = await buildPDF();
@@ -261,7 +276,7 @@ export default function InvoiceEditor() {
         clientName: invoiceData.clientName,
         clientEmail: invoiceData.clientEmail,
         clientAddress: invoiceData.clientAddress,
-        clientGSTIN: invoiceData.clientGSTIN,
+        clientGSTIN: normalizeGSTIN(invoiceData.clientGSTIN),
         description: invoiceData.description,
         amount: subtotal,
         gstRate: invoiceData.gstRate,
@@ -360,6 +375,8 @@ export default function InvoiceEditor() {
         .field label { display: block; font-size: 12.5px; font-weight: 500; color: #374151; margin-bottom: 6px; }
         .field input, .field textarea, .field select { width: 100%; padding: 10px 14px; border: 1.5px solid #e5e9f5; border-radius: 8px; font-size: 14px; font-family: 'DM Sans', sans-serif; color: #111827; background: #fff; transition: border-color 0.15s; outline: none; }
         .field input:focus, .field textarea:focus, .field select:focus { border-color: #2563eb; box-shadow: 0 0 0 3px rgba(37,99,235,0.08); }
+        .field input.invalid { border-color: #dc2626; }
+        .field-error { color: #dc2626; font-size: 12px; margin-top: 5px; }
         .field input.readonly { background: #f8faff; color: #6b7280; }
         .field textarea { resize: vertical; min-height: 80px; }
         .summary-card { background: #fff; border-radius: 12px; border: 1px solid #e5e9f5; position: sticky; top: 24px; }
@@ -517,7 +534,8 @@ export default function InvoiceEditor() {
                     </div>
                     <div className="field">
                       <label>Client Email</label>
-                      <input type="email" name="clientEmail" value={invoiceData.clientEmail} onChange={handleChange} placeholder="client@company.com" />
+                      <input type="email" name="clientEmail" value={invoiceData.clientEmail} onChange={handleChange} placeholder="client@company.com" className={errors.clientEmail ? 'invalid' : ''} />
+                      {errors.clientEmail && <div className="field-error">{errors.clientEmail}</div>}
                     </div>
                   </div>
                   <div className="form-row single">
@@ -529,7 +547,8 @@ export default function InvoiceEditor() {
                   <div className="form-row">
                     <div className="field">
                       <label>Client GSTIN (optional)</label>
-                      <input name="clientGSTIN" value={invoiceData.clientGSTIN} onChange={handleChange} placeholder="29AAABC1234D1Z5" />
+                      <input name="clientGSTIN" value={invoiceData.clientGSTIN} onChange={handleChange} placeholder="29AAABC1234D1Z5" className={errors.clientGSTIN ? 'invalid' : ''} />
+                      {errors.clientGSTIN && <div className="field-error">{errors.clientGSTIN}</div>}
                     </div>
                   </div>
                 </div>
@@ -552,7 +571,8 @@ export default function InvoiceEditor() {
                   <div className="form-row">
                     <div className="field">
                       <label>HSN / SAC Code</label>
-                      <input name="hsn" value={invoiceData.hsn} onChange={handleChange} placeholder="e.g. 9983 (services) or 6109 (goods)" />
+                      <input name="hsn" value={invoiceData.hsn} onChange={handleChange} placeholder="e.g. 9983 (services) or 6109 (goods)" className={errors.hsn ? 'invalid' : ''} />
+                      {errors.hsn && <div className="field-error">{errors.hsn}</div>}
                     </div>
                     <div className="field">
                       <label>Unit (UQC)</label>

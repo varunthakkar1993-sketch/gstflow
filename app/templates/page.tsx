@@ -131,7 +131,7 @@ export default function Templates() {
       <div className="page">
         <div className="page-label">Templates</div>
         <h1 className="page-title">Start from a template</h1>
-        <p className="page-sub">Pick a ready-made template and get your invoice or quote ready in seconds. All fields are pre-filled — just add your client and amount.</p>
+        <p className="page-sub">Pick a ready-made template and get your invoice or quote ready in seconds. All fields are pre-filled, so just add your client and amount.</p>
 
         <div className="grid">
           {templates.map((t) => (
