@@ -34,6 +34,7 @@ const create: Tool[] = [
 const calc: Tool[] = [
   { href: "/gst-calculator", icon: "🧮", title: "GST Calculator", desc: "Add or remove GST from any amount and see the CGST and SGST split instantly." },
   { href: "/gst-rate-finder", icon: "🔎", title: "GST Rate Finder", desc: "Look up the current GST rate and HSN or SAC code for any product or service." },
+  { href: "/gstin-validator", icon: "🛡️", title: "GSTIN Validator", desc: "Verify a GST number's format and checksum, and decode the state and PAN behind it." },
 ];
 
 const guides: Tool[] = [

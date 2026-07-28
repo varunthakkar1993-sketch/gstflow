@@ -9,6 +9,7 @@ const tools = [
   { href: "/quotation-generator", label: "Quotation Generator" },
   { href: "/payment-receipt-generator", label: "Payment Receipt Generator" },
   { href: "/gst-rate-finder", label: "GST Rate Finder" },
+  { href: "/gstin-validator", label: "GSTIN Validator" },
   { href: "/gst-invoice-format", label: "GST Invoice Format" },
 ];
 
