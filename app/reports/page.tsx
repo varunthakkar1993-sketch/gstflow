@@ -306,7 +306,7 @@ export default function Reports() {
       pdf.setFontSize(7); pdf.setFont('helvetica', 'normal');
       pdf.setTextColor(100, 110, 130);
       pdf.text(`Monthly Report: ${label}`, 14, ph - 5);
-      pdf.text('Generated with Paavti.in', pw - 14, ph - 5, { align: 'right' });
+      pdf.text('Made with Paavti · paavti.com', pw - 14, ph - 5, { align: 'right' });
 
       pdf.save(`Paavti-Report-${MONTHS[month]}-${year}.pdf`);
       posthog.capture('monthly_report_generated', { month: MONTHS[month], year, invoices: invoices.length, expenses: expenses.length, revenue: totalRevenue, net_profit: netProfit });

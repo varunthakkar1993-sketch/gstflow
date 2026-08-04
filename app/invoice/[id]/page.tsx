@@ -9,6 +9,7 @@ import jsPDF from 'jspdf';
 import QRCode from 'qrcode';
 import posthog from 'posthog-js';
 import { paymentStatus, balanceDue } from '../../../lib/recurring';
+import { isProUser, drawBrandFooter } from '../../../lib/branding';
 
 export default function InvoiceDetail() {
   const params = useParams();
@@ -20,6 +21,7 @@ export default function InvoiceDetail() {
   const [downloading, setDownloading] = useState(false);
   const [sending, setSending] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [isPro, setIsPro] = useState(false);
   const [user, setUser] = useState<any>(null);
   const [showMenu, setShowMenu] = useState(false);
 
@@ -35,6 +37,7 @@ export default function InvoiceDetail() {
         ]);
         if (invSnap.exists()) setInvoice({ id: invSnap.id, ...invSnap.data() });
         if (profileSnap.exists()) setProfile(profileSnap.data());
+        setIsPro(await isProUser(db, currentUser.uid));
       } catch (err) {
         console.error(err);
       }
@@ -123,8 +126,9 @@ export default function InvoiceDetail() {
       doc2.text(profile.upiId, 65, y + 20); y += 48;
     }
     doc2.setFontSize(9); doc2.setFont('helvetica', 'normal');
+    doc2.setTextColor(60, 70, 90);
     doc2.text('Thank you for your business!', 20, y);
-    doc2.text('Made with Paavti.in', 20, y + 6);
+    drawBrandFooter(doc2, !isPro);
     return doc2;
   };
 

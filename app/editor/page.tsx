@@ -9,6 +9,7 @@ import QRCode from 'qrcode';
 import posthog from 'posthog-js';
 import { validateEmail, validateGSTIN, validateHSN, normalizeGSTIN } from '../../lib/validators';
 import { nextDueDate, FREQUENCY_LABELS, Frequency } from '../../lib/recurring';
+import { isProUser, drawBrandFooter } from '../../lib/branding';
 
 export default function InvoiceEditor() {
   const [user, setUser] = useState<any>(null);
@@ -19,6 +20,7 @@ export default function InvoiceEditor() {
   const [pdfBase64, setPdfBase64] = useState('');
   const [sending, setSending] = useState(false);
   const [editId, setEditId] = useState('');
+  const [isPro, setIsPro] = useState(false);
 
   const [invoiceData, setInvoiceData] = useState({
     invoiceNumber: '',
@@ -41,6 +43,7 @@ export default function InvoiceEditor() {
       setUser(currentUser);
       const profileSnap = await getDoc(doc(db, 'profiles', currentUser.uid));
       if (profileSnap.exists()) setProfile(profileSnap.data());
+      setIsPro(await isProUser(db, currentUser.uid));
 
       // Edit mode: load the existing invoice instead of starting a new one.
       const editParam = typeof window !== 'undefined'
@@ -302,7 +305,7 @@ export default function InvoiceEditor() {
     doc2.setFontSize(8); doc2.setFont('helvetica', 'normal');
     doc2.setTextColor(100, 110, 130);
     doc2.text('Thank you for your business!', 14, pageHeight - 6);
-    doc2.text('Made with Paavti.in', pageWidth - 14, pageHeight - 6, { align: 'right' });
+    drawBrandFooter(doc2, !isPro);
 
     return doc2;
   };
@@ -771,6 +774,13 @@ export default function InvoiceEditor() {
                     <div className="summary-total-label">Total</div>
                     <div className="summary-total-value">Rs. {total.toLocaleString('en-IN')}</div>
                   </div>
+
+                  {!isPro && (
+                    <div style={{ marginTop: 16, background: '#f8faff', border: '1px solid #e5e9f5', borderRadius: 9, padding: '11px 14px', fontSize: 12.5, color: '#6b7280', lineHeight: 1.5 }}>
+                      Your PDF carries a small &ldquo;Made with Paavti&rdquo; line at the bottom.{' '}
+                      <a href="/pricing" style={{ color: '#2563eb', fontWeight: 500, textDecoration: 'none' }}>Upgrade to remove it</a>.
+                    </div>
+                  )}
 
                   {!invoiceSaved ? (
                     <button onClick={generateAndSavePDF} disabled={loading} className="btn-primary">

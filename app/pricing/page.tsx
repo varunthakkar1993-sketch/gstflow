@@ -182,6 +182,7 @@ export default function PricingPage() {
             <li className="feature-item disabled"><span className="cross"><svg width="10" height="10" viewBox="0 0 12 12" fill="none"><path d="M3 3l6 6M9 3l-6 6" stroke="#9ca3af" strokeWidth="1.5" strokeLinecap="round"/></svg></span>Expense tracker</li>
             <li className="feature-item disabled"><span className="cross"><svg width="10" height="10" viewBox="0 0 12 12" fill="none"><path d="M3 3l6 6M9 3l-6 6" stroke="#9ca3af" strokeWidth="1.5" strokeLinecap="round"/></svg></span>WhatsApp sharing</li>
             <li className="feature-item disabled"><span className="cross"><svg width="10" height="10" viewBox="0 0 12 12" fill="none"><path d="M3 3l6 6M9 3l-6 6" stroke="#9ca3af" strokeWidth="1.5" strokeLinecap="round"/></svg></span>Business dashboard</li>
+            <li className="feature-item disabled"><span className="cross"><svg width="10" height="10" viewBox="0 0 12 12" fill="none"><path d="M3 3l6 6M9 3l-6 6" stroke="#9ca3af" strokeWidth="1.5" strokeLinecap="round"/></svg></span>Remove Paavti branding</li>
           </ul>
           <a href="/signup" className="plan-btn outline">Get Started Free</a>
         </div>
@@ -194,6 +195,7 @@ export default function PricingPage() {
           <div className="plan-divider" />
           <ul className="features-list">
             <li className="feature-item"><span className="check"><svg width="10" height="10" viewBox="0 0 12 12" fill="none"><path d="M2 6l3 3 5-5" stroke="#16a34a" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg></span>Unlimited invoices</li>
+            <li className="feature-item"><span className="check"><svg width="10" height="10" viewBox="0 0 12 12" fill="none"><path d="M2 6l3 3 5-5" stroke="#16a34a" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg></span>Remove Paavti branding</li>
             <li className="feature-item"><span className="check"><svg width="10" height="10" viewBox="0 0 12 12" fill="none"><path d="M2 6l3 3 5-5" stroke="#16a34a" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg></span>Unlimited quotes</li>
             <li className="feature-item"><span className="check"><svg width="10" height="10" viewBox="0 0 12 12" fill="none"><path d="M2 6l3 3 5-5" stroke="#16a34a" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg></span>GST compliant PDFs</li>
             <li className="feature-item"><span className="check"><svg width="10" height="10" viewBox="0 0 12 12" fill="none"><path d="M2 6l3 3 5-5" stroke="#16a34a" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg></span>UPI QR code</li>

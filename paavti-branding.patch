@@ -1,0 +1,318 @@
+diff --git a/app/credit-note-editor/page.tsx b/app/credit-note-editor/page.tsx
+index 29b4f7e..753603a 100644
+--- a/app/credit-note-editor/page.tsx
++++ b/app/credit-note-editor/page.tsx
+@@ -3,6 +3,7 @@
+ import { useEffect, useState } from 'react';
+ import { onAuthStateChanged } from 'firebase/auth';
+ import { auth, db } from '../../lib/firebase';
++import { isProUser, drawBrandFooter } from '../../lib/branding';
+ import { collection, addDoc, serverTimestamp, doc, getDoc, query, where, getCountFromServer } from 'firebase/firestore';
+ import jsPDF from 'jspdf';
+ import posthog from 'posthog-js';
+@@ -23,6 +24,7 @@ export default function CreditNoteEditor() {
+   const [showMenu, setShowMenu] = useState(false);
+   const [loading, setLoading] = useState(false);
+   const [profile, setProfile] = useState<any>(null);
++  const [isPro, setIsPro] = useState(false);
+   const [saved, setSaved] = useState(false);
+   const [linkedInvoice, setLinkedInvoice] = useState<any>(null);
+ 
+@@ -49,6 +51,7 @@ export default function CreditNoteEditor() {
+       setUser(currentUser);
+       const profileSnap = await getDoc(doc(db, 'profiles', currentUser.uid));
+       if (profileSnap.exists()) setProfile(profileSnap.data());
++      setIsPro(await isProUser(db, currentUser.uid));
+ 
+       const q = query(collection(db, 'creditNotes'), where('userId', '==', currentUser.uid));
+       const countSnap = await getCountFromServer(q);
+@@ -180,7 +183,7 @@ export default function CreditNoteEditor() {
+     d.rect(0, ph - 14, pw, 14, 'F');
+     d.setFontSize(8); d.setFont('helvetica', 'normal'); d.setTextColor(100, 110, 130);
+     d.text('Credit note issued under Section 34 of the CGST Act.', 14, ph - 6);
+-    d.text('Made with Paavti.in', pw - 14, ph - 6, { align: 'right' });
++    drawBrandFooter(d, !isPro);
+     return d;
+   };
+ 
+diff --git a/app/editor/page.tsx b/app/editor/page.tsx
+index 7992702..ec0b1fc 100644
+--- a/app/editor/page.tsx
++++ b/app/editor/page.tsx
+@@ -9,6 +9,7 @@ import QRCode from 'qrcode';
+ import posthog from 'posthog-js';
+ import { validateEmail, validateGSTIN, validateHSN, normalizeGSTIN } from '../../lib/validators';
+ import { nextDueDate, FREQUENCY_LABELS, Frequency } from '../../lib/recurring';
++import { isProUser, drawBrandFooter } from '../../lib/branding';
+ 
+ export default function InvoiceEditor() {
+   const [user, setUser] = useState<any>(null);
+@@ -19,6 +20,7 @@ export default function InvoiceEditor() {
+   const [pdfBase64, setPdfBase64] = useState('');
+   const [sending, setSending] = useState(false);
+   const [editId, setEditId] = useState('');
++  const [isPro, setIsPro] = useState(false);
+ 
+   const [invoiceData, setInvoiceData] = useState({
+     invoiceNumber: '',
+@@ -41,6 +43,7 @@ export default function InvoiceEditor() {
+       setUser(currentUser);
+       const profileSnap = await getDoc(doc(db, 'profiles', currentUser.uid));
+       if (profileSnap.exists()) setProfile(profileSnap.data());
++      setIsPro(await isProUser(db, currentUser.uid));
+ 
+       // Edit mode: load the existing invoice instead of starting a new one.
+       const editParam = typeof window !== 'undefined'
+@@ -302,7 +305,7 @@ export default function InvoiceEditor() {
+     doc2.setFontSize(8); doc2.setFont('helvetica', 'normal');
+     doc2.setTextColor(100, 110, 130);
+     doc2.text('Thank you for your business!', 14, pageHeight - 6);
+-    doc2.text('Made with Paavti.in', pageWidth - 14, pageHeight - 6, { align: 'right' });
++    drawBrandFooter(doc2, !isPro);
+ 
+     return doc2;
+   };
+@@ -772,6 +775,13 @@ export default function InvoiceEditor() {
+                     <div className="summary-total-value">Rs. {total.toLocaleString('en-IN')}</div>
+                   </div>
+ 
++                  {!isPro && (
++                    <div style={{ marginTop: 16, background: '#f8faff', border: '1px solid #e5e9f5', borderRadius: 9, padding: '11px 14px', fontSize: 12.5, color: '#6b7280', lineHeight: 1.5 }}>
++                      Your PDF carries a small &ldquo;Made with Paavti&rdquo; line at the bottom.{' '}
++                      <a href="/pricing" style={{ color: '#2563eb', fontWeight: 500, textDecoration: 'none' }}>Upgrade to remove it</a>.
++                    </div>
++                  )}
++
+                   {!invoiceSaved ? (
+                     <button onClick={generateAndSavePDF} disabled={loading} className="btn-primary">
+                       {loading ? 'Generating…' : editId ? '↓ Save Changes & Download' : '↓ Generate & Download PDF'}
+diff --git a/app/invoice/[id]/page.tsx b/app/invoice/[id]/page.tsx
+index 7ebc622..76bed2f 100644
+--- a/app/invoice/[id]/page.tsx
++++ b/app/invoice/[id]/page.tsx
+@@ -9,6 +9,7 @@ import jsPDF from 'jspdf';
+ import QRCode from 'qrcode';
+ import posthog from 'posthog-js';
+ import { paymentStatus, balanceDue } from '../../../lib/recurring';
++import { isProUser, drawBrandFooter } from '../../../lib/branding';
+ 
+ export default function InvoiceDetail() {
+   const params = useParams();
+@@ -20,6 +21,7 @@ export default function InvoiceDetail() {
+   const [downloading, setDownloading] = useState(false);
+   const [sending, setSending] = useState(false);
+   const [saving, setSaving] = useState(false);
++  const [isPro, setIsPro] = useState(false);
+   const [user, setUser] = useState<any>(null);
+   const [showMenu, setShowMenu] = useState(false);
+ 
+@@ -35,6 +37,7 @@ export default function InvoiceDetail() {
+         ]);
+         if (invSnap.exists()) setInvoice({ id: invSnap.id, ...invSnap.data() });
+         if (profileSnap.exists()) setProfile(profileSnap.data());
++        setIsPro(await isProUser(db, currentUser.uid));
+       } catch (err) {
+         console.error(err);
+       }
+@@ -123,8 +126,9 @@ export default function InvoiceDetail() {
+       doc2.text(profile.upiId, 65, y + 20); y += 48;
+     }
+     doc2.setFontSize(9); doc2.setFont('helvetica', 'normal');
++    doc2.setTextColor(60, 70, 90);
+     doc2.text('Thank you for your business!', 20, y);
+-    doc2.text('Made with Paavti.in', 20, y + 6);
++    drawBrandFooter(doc2, !isPro);
+     return doc2;
+   };
+ 
+diff --git a/app/pricing/page.tsx b/app/pricing/page.tsx
+index a0643bc..f77cb31 100644
+--- a/app/pricing/page.tsx
++++ b/app/pricing/page.tsx
+@@ -182,6 +182,7 @@ export default function PricingPage() {
+             <li className="feature-item disabled"><span className="cross"><svg width="10" height="10" viewBox="0 0 12 12" fill="none"><path d="M3 3l6 6M9 3l-6 6" stroke="#9ca3af" strokeWidth="1.5" strokeLinecap="round"/></svg></span>Expense tracker</li>
+             <li className="feature-item disabled"><span className="cross"><svg width="10" height="10" viewBox="0 0 12 12" fill="none"><path d="M3 3l6 6M9 3l-6 6" stroke="#9ca3af" strokeWidth="1.5" strokeLinecap="round"/></svg></span>WhatsApp sharing</li>
+             <li className="feature-item disabled"><span className="cross"><svg width="10" height="10" viewBox="0 0 12 12" fill="none"><path d="M3 3l6 6M9 3l-6 6" stroke="#9ca3af" strokeWidth="1.5" strokeLinecap="round"/></svg></span>Business dashboard</li>
++            <li className="feature-item disabled"><span className="cross"><svg width="10" height="10" viewBox="0 0 12 12" fill="none"><path d="M3 3l6 6M9 3l-6 6" stroke="#9ca3af" strokeWidth="1.5" strokeLinecap="round"/></svg></span>Remove Paavti branding</li>
+           </ul>
+           <a href="/signup" className="plan-btn outline">Get Started Free</a>
+         </div>
+@@ -194,6 +195,7 @@ export default function PricingPage() {
+           <div className="plan-divider" />
+           <ul className="features-list">
+             <li className="feature-item"><span className="check"><svg width="10" height="10" viewBox="0 0 12 12" fill="none"><path d="M2 6l3 3 5-5" stroke="#16a34a" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg></span>Unlimited invoices</li>
++            <li className="feature-item"><span className="check"><svg width="10" height="10" viewBox="0 0 12 12" fill="none"><path d="M2 6l3 3 5-5" stroke="#16a34a" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg></span>Remove Paavti branding</li>
+             <li className="feature-item"><span className="check"><svg width="10" height="10" viewBox="0 0 12 12" fill="none"><path d="M2 6l3 3 5-5" stroke="#16a34a" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg></span>Unlimited quotes</li>
+             <li className="feature-item"><span className="check"><svg width="10" height="10" viewBox="0 0 12 12" fill="none"><path d="M2 6l3 3 5-5" stroke="#16a34a" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg></span>GST compliant PDFs</li>
+             <li className="feature-item"><span className="check"><svg width="10" height="10" viewBox="0 0 12 12" fill="none"><path d="M2 6l3 3 5-5" stroke="#16a34a" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg></span>UPI QR code</li>
+diff --git a/app/quote-editor/page.tsx b/app/quote-editor/page.tsx
+index b62b4fe..bf456ec 100644
+--- a/app/quote-editor/page.tsx
++++ b/app/quote-editor/page.tsx
+@@ -3,6 +3,7 @@
+ import { useEffect, useState } from 'react';
+ import { onAuthStateChanged } from 'firebase/auth';
+ import { auth, db } from '../../lib/firebase';
++import { isProUser, drawBrandFooter } from '../../lib/branding';
+ import { collection, addDoc, serverTimestamp, doc, getDoc, query, where, getCountFromServer } from 'firebase/firestore';
+ import jsPDF from 'jspdf';
+ import posthog from 'posthog-js';
+@@ -15,6 +16,7 @@ export default function QuoteEditor() {
+   const [showMenu, setShowMenu] = useState(false);
+   const [loading, setLoading] = useState(false);
+   const [profile, setProfile] = useState<any>(null);
++  const [isPro, setIsPro] = useState(false);
+   const [quoteSaved, setQuoteSaved] = useState(false);
+   const [savedId, setSavedId] = useState('');
+   const [pdfBase64, setPdfBase64] = useState('');
+@@ -45,6 +47,7 @@ export default function QuoteEditor() {
+       setUser(currentUser);
+       const profileSnap = await getDoc(doc(db, 'profiles', currentUser.uid));
+       if (profileSnap.exists()) setProfile(profileSnap.data());
++      setIsPro(await isProUser(db, currentUser.uid));
+       const q = query(collection(db, 'quotes'), where('userId', '==', currentUser.uid));
+       const countSnap = await getCountFromServer(q);
+       const count = countSnap.data().count + 1;
+@@ -159,7 +162,7 @@ export default function QuoteEditor() {
+     doc2.rect(0, pageHeight - 14, pageWidth, 14, 'F');
+     doc2.setFontSize(8); doc2.setFont('helvetica', 'normal'); doc2.setTextColor(100, 110, 130);
+     doc2.text('This is an estimate. Prices are subject to change.', 14, pageHeight - 6);
+-    doc2.text('Made with Paavti.in', pageWidth - 14, pageHeight - 6, { align: 'right' });
++    drawBrandFooter(doc2, !isPro);
+     return doc2;
+   };
+ 
+diff --git a/app/quote/[id]/page.tsx b/app/quote/[id]/page.tsx
+index 3fb628b..7be29a5 100644
+--- a/app/quote/[id]/page.tsx
++++ b/app/quote/[id]/page.tsx
+@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
+ import { useParams } from 'next/navigation';
+ import { onAuthStateChanged } from 'firebase/auth';
+ import { auth, db } from '../../../lib/firebase';
++import { isProUser, drawBrandFooter } from '../../../lib/branding';
+ import { doc, getDoc } from 'firebase/firestore';
+ import jsPDF from 'jspdf';
+ 
+@@ -13,6 +14,7 @@ export default function QuoteDetail() {
+   const [quote, setQuote] = useState<any>(null);
+   const [showMenu, setShowMenu] = useState(false);
+   const [profile, setProfile] = useState<any>(null);
++  const [isPro, setIsPro] = useState(false);
+   const [loading, setLoading] = useState(true);
+   const [downloading, setDownloading] = useState(false);
+ 
+@@ -26,6 +28,7 @@ export default function QuoteDetail() {
+       ]);
+       if (qSnap.exists()) setQuote({ id: qSnap.id, ...qSnap.data() });
+       if (pSnap.exists()) setProfile(pSnap.data());
++      setIsPro(await isProUser(db, currentUser.uid));
+       setLoading(false);
+     });
+   }, [id]);
+@@ -96,7 +99,7 @@ export default function QuoteDetail() {
+     doc2.rect(0, pageHeight - 14, pageWidth, 14, 'F');
+     doc2.setFontSize(8); doc2.setFont('helvetica', 'normal'); doc2.setTextColor(100, 110, 130);
+     doc2.text('This is an estimate. Prices are subject to change.', 14, pageHeight - 6);
+-    doc2.text('Made with Paavti.in', pageWidth - 14, pageHeight - 6, { align: 'right' });
++    drawBrandFooter(doc2, !isPro);
+     return doc2;
+   };
+ 
+diff --git a/app/receipt-editor/page.tsx b/app/receipt-editor/page.tsx
+index 5eb3447..76b52f8 100644
+--- a/app/receipt-editor/page.tsx
++++ b/app/receipt-editor/page.tsx
+@@ -3,6 +3,7 @@
+ import { useEffect, useState } from 'react';
+ import { onAuthStateChanged } from 'firebase/auth';
+ import { auth, db } from '../../lib/firebase';
++import { isProUser, drawBrandFooter } from '../../lib/branding';
+ import { collection, addDoc, serverTimestamp, doc, getDoc, query, where, getCountFromServer } from 'firebase/firestore';
+ import jsPDF from 'jspdf';
+ import posthog from 'posthog-js';
+@@ -12,6 +13,7 @@ export default function ReceiptEditor() {
+   const [showMenu, setShowMenu] = useState(false);
+   const [loading, setLoading] = useState(false);
+   const [profile, setProfile] = useState<any>(null);
++  const [isPro, setIsPro] = useState(false);
+   const [receiptSaved, setReceiptSaved] = useState(false);
+   const [pdfBase64, setPdfBase64] = useState('');
+   const [sending, setSending] = useState(false);
+@@ -34,6 +36,7 @@ export default function ReceiptEditor() {
+       setUser(currentUser);
+       const profileSnap = await getDoc(doc(db, 'profiles', currentUser.uid));
+       if (profileSnap.exists()) setProfile(profileSnap.data());
++      setIsPro(await isProUser(db, currentUser.uid));
+       const q = query(collection(db, 'receipts'), where('userId', '==', currentUser.uid));
+       const countSnap = await getCountFromServer(q);
+       const count = countSnap.data().count + 1;
+@@ -182,7 +185,7 @@ export default function ReceiptEditor() {
+     doc2.setFontSize(8); doc2.setFont('helvetica', 'normal');
+     doc2.setTextColor(100, 110, 130);
+     doc2.text('This is a computer-generated receipt.', 14, pageHeight - 6);
+-    doc2.text('Made with Paavti.in', pageWidth - 14, pageHeight - 6, { align: 'right' });
++    drawBrandFooter(doc2, !isPro);
+ 
+     return doc2;
+   };
+diff --git a/app/reports/page.tsx b/app/reports/page.tsx
+index 65fb011..9f54acc 100644
+--- a/app/reports/page.tsx
++++ b/app/reports/page.tsx
+@@ -306,7 +306,7 @@ export default function Reports() {
+       pdf.setFontSize(7); pdf.setFont('helvetica', 'normal');
+       pdf.setTextColor(100, 110, 130);
+       pdf.text(`Monthly Report: ${label}`, 14, ph - 5);
+-      pdf.text('Generated with Paavti.in', pw - 14, ph - 5, { align: 'right' });
++      pdf.text('Made with Paavti · paavti.com', pw - 14, ph - 5, { align: 'right' });
+ 
+       pdf.save(`Paavti-Report-${MONTHS[month]}-${year}.pdf`);
+       posthog.capture('monthly_report_generated', { month: MONTHS[month], year, invoices: invoices.length, expenses: expenses.length, revenue: totalRevenue, net_profit: netProfit });
+diff --git a/lib/branding.ts b/lib/branding.ts
+new file mode 100644
+index 0000000..668e552
+--- /dev/null
++++ b/lib/branding.ts
+@@ -0,0 +1,41 @@
++// PDF footer branding.
++// Free plans carry a small "Made with Paavti" credit on generated documents.
++// Pro, yearly and lifetime plans get a clean document with no Paavti mark.
++//
++// The credit is deliberately small and centred rather than a diagonal
++// watermark: these documents are sent by our users to their own clients,
++// and a heavy watermark would undercut how professional they look.
++
++import { doc as fsDoc, getDoc, Firestore } from 'firebase/firestore';
++
++export const BRAND_LINE = 'Made with Paavti · paavti.com';
++
++// True when the user is on any paid plan.
++export async function isProUser(db: Firestore, uid?: string): Promise<boolean> {
++  if (!uid) return false;
++  try {
++    const snap = await getDoc(fsDoc(db, 'subscriptions', uid));
++    return snap.exists() && snap.data()?.status === 'active';
++  } catch {
++    // If the lookup fails, fall back to showing the credit rather than
++    // silently stripping branding for someone who has not paid.
++    return false;
++  }
++}
++
++// Draw the centred credit line at the bottom of the current page.
++// Pass showBranding=false for paid users to skip it entirely.
++export function drawBrandFooter(
++  pdf: any,
++  showBranding: boolean,
++  opts: { color?: [number, number, number]; fontSize?: number; offsetY?: number } = {},
++) {
++  if (!showBranding) return;
++  const { color = [150, 158, 172], fontSize = 8, offsetY = 6 } = opts;
++  const pw = pdf.internal.pageSize.getWidth();
++  const ph = pdf.internal.pageSize.getHeight();
++  pdf.setFontSize(fontSize);
++  pdf.setFont('helvetica', 'normal');
++  pdf.setTextColor(color[0], color[1], color[2]);
++  pdf.text(BRAND_LINE, pw / 2, ph - offsetY, { align: 'center' });
++}

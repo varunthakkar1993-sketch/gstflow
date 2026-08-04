@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { onAuthStateChanged } from 'firebase/auth';
 import { auth, db } from '../../lib/firebase';
+import { isProUser, drawBrandFooter } from '../../lib/branding';
 import { collection, addDoc, serverTimestamp, doc, getDoc, query, where, getCountFromServer } from 'firebase/firestore';
 import jsPDF from 'jspdf';
 import posthog from 'posthog-js';
@@ -15,6 +16,7 @@ export default function QuoteEditor() {
   const [showMenu, setShowMenu] = useState(false);
   const [loading, setLoading] = useState(false);
   const [profile, setProfile] = useState<any>(null);
+  const [isPro, setIsPro] = useState(false);
   const [quoteSaved, setQuoteSaved] = useState(false);
   const [savedId, setSavedId] = useState('');
   const [pdfBase64, setPdfBase64] = useState('');
@@ -45,6 +47,7 @@ export default function QuoteEditor() {
       setUser(currentUser);
       const profileSnap = await getDoc(doc(db, 'profiles', currentUser.uid));
       if (profileSnap.exists()) setProfile(profileSnap.data());
+      setIsPro(await isProUser(db, currentUser.uid));
       const q = query(collection(db, 'quotes'), where('userId', '==', currentUser.uid));
       const countSnap = await getCountFromServer(q);
       const count = countSnap.data().count + 1;
@@ -159,7 +162,7 @@ export default function QuoteEditor() {
     doc2.rect(0, pageHeight - 14, pageWidth, 14, 'F');
     doc2.setFontSize(8); doc2.setFont('helvetica', 'normal'); doc2.setTextColor(100, 110, 130);
     doc2.text('This is an estimate. Prices are subject to change.', 14, pageHeight - 6);
-    doc2.text('Made with Paavti.in', pageWidth - 14, pageHeight - 6, { align: 'right' });
+    drawBrandFooter(doc2, !isPro);
     return doc2;
   };
 

@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import { onAuthStateChanged } from 'firebase/auth';
 import { auth, db } from '../../../lib/firebase';
+import { isProUser, drawBrandFooter } from '../../../lib/branding';
 import { doc, getDoc } from 'firebase/firestore';
 import jsPDF from 'jspdf';
 
@@ -13,6 +14,7 @@ export default function QuoteDetail() {
   const [quote, setQuote] = useState<any>(null);
   const [showMenu, setShowMenu] = useState(false);
   const [profile, setProfile] = useState<any>(null);
+  const [isPro, setIsPro] = useState(false);
   const [loading, setLoading] = useState(true);
   const [downloading, setDownloading] = useState(false);
 
@@ -26,6 +28,7 @@ export default function QuoteDetail() {
       ]);
       if (qSnap.exists()) setQuote({ id: qSnap.id, ...qSnap.data() });
       if (pSnap.exists()) setProfile(pSnap.data());
+      setIsPro(await isProUser(db, currentUser.uid));
       setLoading(false);
     });
   }, [id]);
@@ -96,7 +99,7 @@ export default function QuoteDetail() {
     doc2.rect(0, pageHeight - 14, pageWidth, 14, 'F');
     doc2.setFontSize(8); doc2.setFont('helvetica', 'normal'); doc2.setTextColor(100, 110, 130);
     doc2.text('This is an estimate. Prices are subject to change.', 14, pageHeight - 6);
-    doc2.text('Made with Paavti.in', pageWidth - 14, pageHeight - 6, { align: 'right' });
+    drawBrandFooter(doc2, !isPro);
     return doc2;
   };
 

@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { onAuthStateChanged } from 'firebase/auth';
 import { auth, db } from '../../lib/firebase';
+import { isProUser, drawBrandFooter } from '../../lib/branding';
 import { collection, addDoc, serverTimestamp, doc, getDoc, query, where, getCountFromServer } from 'firebase/firestore';
 import jsPDF from 'jspdf';
 import posthog from 'posthog-js';
@@ -23,6 +24,7 @@ export default function CreditNoteEditor() {
   const [showMenu, setShowMenu] = useState(false);
   const [loading, setLoading] = useState(false);
   const [profile, setProfile] = useState<any>(null);
+  const [isPro, setIsPro] = useState(false);
   const [saved, setSaved] = useState(false);
   const [linkedInvoice, setLinkedInvoice] = useState<any>(null);
 
@@ -49,6 +51,7 @@ export default function CreditNoteEditor() {
       setUser(currentUser);
       const profileSnap = await getDoc(doc(db, 'profiles', currentUser.uid));
       if (profileSnap.exists()) setProfile(profileSnap.data());
+      setIsPro(await isProUser(db, currentUser.uid));
 
       const q = query(collection(db, 'creditNotes'), where('userId', '==', currentUser.uid));
       const countSnap = await getCountFromServer(q);
@@ -180,7 +183,7 @@ export default function CreditNoteEditor() {
     d.rect(0, ph - 14, pw, 14, 'F');
     d.setFontSize(8); d.setFont('helvetica', 'normal'); d.setTextColor(100, 110, 130);
     d.text('Credit note issued under Section 34 of the CGST Act.', 14, ph - 6);
-    d.text('Made with Paavti.in', pw - 14, ph - 6, { align: 'right' });
+    drawBrandFooter(d, !isPro);
     return d;
   };
 
