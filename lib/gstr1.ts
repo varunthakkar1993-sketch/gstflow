@@ -110,6 +110,26 @@ export interface ProfileLike {
   businessName?: string;
 }
 
+export interface CreditNoteLike {
+  creditNoteNumber?: string;
+  date?: string;            // ISO yyyy-mm-dd
+  invoiceRef?: string;
+  invoiceDate?: string;
+  clientName?: string;
+  clientGSTIN?: string;
+  amount?: number;          // taxable value credited
+  gstRate?: string | number;
+  isIntraState?: boolean;
+  total?: number;
+  reason?: string;
+}
+
+export interface CDNRRow {
+  ctin: string; nt_num: string; nt_dt: string; inum: string; idt: string;
+  val: number; pos: string; posLabel: string; ntty: 'C'; rate: number;
+  txval: number; iamt: number; camt: number; samt: number; clientName: string;
+}
+
 export interface Gstr1Warning {
   invoiceNumber: string;
   message: string;
@@ -139,8 +159,9 @@ export interface Gstr1Result {
   b2b: B2BRow[];
   b2cl: B2CLRow[];
   b2cs: B2CSRow[];
+  cdnr: CDNRRow[];
   hsn: HSNRow[];
-  totals: { taxable: number; igst: number; cgst: number; sgst: number; invoiceValue: number; count: number };
+  totals: { taxable: number; igst: number; cgst: number; sgst: number; invoiceValue: number; count: number; creditTaxable: number; creditTax: number };
   warnings: Gstr1Warning[];
   json: any;             // GSTN GSTR-1 upload schema
 }
@@ -162,6 +183,7 @@ export function buildGstr1(
   profile: ProfileLike,
   month: number,
   year: number,
+  creditNotes: CreditNoteLike[] = [],
 ): Gstr1Result {
   const warnings: Gstr1Warning[] = [];
   const supplierGstin = (profile.gstin || '').trim().toUpperCase();
@@ -257,22 +279,66 @@ export function buildGstr1(
   }
 
   for (const [, row] of b2csMap) b2cs.push(row);
+
+  // Credit notes (table 9B). Registered-buyer credits go to CDNR; unregistered
+  // credits are netted off B2CS by reducing the matching rate bucket.
+  const cdnr: CDNRRow[] = [];
+  let cTaxable = 0, cTax = 0;
+  for (const cn of creditNotes) {
+    const taxable = round2(Number(cn.amount) || 0);
+    const rate = parseFloat(String(cn.gstRate)) || 0;
+    const tax = round2(taxable * rate / 100);
+    const isIntra = cn.isIntraState === true;
+    const val = round2(Number(cn.total) || round2(taxable + tax));
+    const igst = isIntra ? 0 : tax;
+    const camt = isIntra ? round2(tax / 2) : 0;
+    const samt = isIntra ? round2(tax / 2) : 0;
+    cTaxable += taxable; cTax += tax;
+
+    const ctin = (cn.clientGSTIN || '').trim().toUpperCase();
+    const pos = isIntra ? supplierState : (stateCodeFromGSTIN(ctin) || supplierState);
+
+    if (ctin) {
+      cdnr.push({
+        ctin, nt_num: cn.creditNoteNumber || '', nt_dt: isoToDdmmyyyy(cn.date),
+        inum: cn.invoiceRef || '', idt: isoToDdmmyyyy(cn.invoiceDate),
+        val, pos, posLabel: stateLabel(pos), ntty: 'C', rate,
+        txval: taxable, iamt: igst, camt, samt, clientName: cn.clientName || '',
+      });
+    } else {
+      // Unregistered buyer: net the credit against the B2CS bucket for that rate.
+      const sply_ty: 'INTRA' | 'INTER' = isIntra ? 'INTRA' : 'INTER';
+      const key = `${sply_ty}|${pos}|${rate}`;
+      const existing = b2cs.find(r => `${r.sply_ty}|${r.pos}|${r.rate}` === key);
+      if (existing) {
+        existing.txval = round2(existing.txval - taxable);
+        existing.iamt = round2(existing.iamt - igst);
+        existing.camt = round2(existing.camt - camt);
+        existing.samt = round2(existing.samt - samt);
+      } else {
+        b2cs.push({ sply_ty, pos, posLabel: stateLabel(pos), typ: 'OE', rate, txval: -taxable, iamt: -igst, camt: -camt, samt: -samt });
+      }
+      warnings.push({ invoiceNumber: cn.creditNoteNumber || '-', message: 'Credit note has no client GSTIN, so it is netted off your B2CS totals rather than reported as a separate CDNR record.' });
+    }
+  }
+
   const hsn = Array.from(hsnMap.values()).map((h, i) => ({ ...h, num: i + 1 }));
 
   const fp = `${String(month + 1).padStart(2, '0')}${year}`;
   const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
   const period = `${MONTHS[month]} ${year}`;
 
-  const json = buildGstnJson(supplierGstin, fp, b2b, b2cl, b2cs, hsn);
+  const json = buildGstnJson(supplierGstin, fp, b2b, b2cl, b2cs, hsn, cdnr);
 
   return {
     gstin: supplierGstin,
     fp,
     period,
-    b2b, b2cl, b2cs, hsn,
+    b2b, b2cl, b2cs, cdnr, hsn,
     totals: {
       taxable: round2(tTax), igst: round2(tIgst), cgst: round2(tCgst), sgst: round2(tSgst),
       invoiceValue: round2(tVal), count: invoices.length,
+      creditTaxable: round2(cTaxable), creditTax: round2(cTax),
     },
     warnings,
     json,
@@ -280,7 +346,7 @@ export function buildGstr1(
 }
 
 // GSTN GSTR-1 upload schema (portal-importable JSON).
-function buildGstnJson(gstin: string, fp: string, b2b: B2BRow[], b2cl: B2CLRow[], b2cs: B2CSRow[], hsn: HSNRow[]) {
+function buildGstnJson(gstin: string, fp: string, b2b: B2BRow[], b2cl: B2CLRow[], b2cs: B2CSRow[], hsn: HSNRow[], cdnr: CDNRRow[] = []) {
   // B2B grouped by counterparty GSTIN.
   const b2bByCtin = new Map<string, B2BRow[]>();
   for (const r of b2b) {
@@ -345,10 +411,38 @@ function buildGstnJson(gstin: string, fp: string, b2b: B2BRow[], b2cl: B2CLRow[]
     })),
   };
 
+  // CDNR grouped by counterparty GSTIN.
+  const cdnrByCtin = new Map<string, CDNRRow[]>();
+  for (const r of cdnr) {
+    const arr = cdnrByCtin.get(r.ctin) || [];
+    arr.push(r);
+    cdnrByCtin.set(r.ctin, arr);
+  }
+  const cdnrJson = Array.from(cdnrByCtin.entries()).map(([ctin, rows]) => ({
+    ctin,
+    nt: rows.map(r => ({
+      ntty: r.ntty,
+      nt_num: r.nt_num,
+      nt_dt: r.nt_dt,
+      inum: r.inum,
+      idt: r.idt,
+      val: r.val,
+      pos: r.pos,
+      rchrg: 'N',
+      itms: [{
+        num: 1,
+        itm_det: r.iamt > 0
+          ? { txval: r.txval, rt: r.rate, iamt: r.iamt, csamt: 0 }
+          : { txval: r.txval, rt: r.rate, camt: r.camt, samt: r.samt, csamt: 0 },
+      }],
+    })),
+  }));
+
   const out: any = { gstin, fp, version: 'GST3.2.2', hash: 'hash' };
   if (b2bJson.length) out.b2b = b2bJson;
   if (b2clJson.length) out.b2cl = b2clJson;
   if (b2csJson.length) out.b2cs = b2csJson;
+  if (cdnrJson.length) out.cdnr = cdnrJson;
   if (hsnJson.data.length) out.hsn = hsnJson;
   return out;
 }

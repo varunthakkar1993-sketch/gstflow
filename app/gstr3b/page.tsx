@@ -48,7 +48,14 @@ export default function Gstr3bPage() {
         const dt = new Date(exp.date);
         return dt.getMonth() === month && dt.getFullYear() === year;
       });
-      const r = buildGstr3b(monthInvoices, monthExpenses, month, year);
+      const cq = query(collection(db, 'creditNotes'), where('userId', '==', user.uid));
+      const csnap = await getDocs(cq);
+      const monthCredits = csnap.docs.map(d => d.data() as any).filter((cn: any) => {
+        if (!cn.date) return false;
+        const dt = new Date(cn.date);
+        return dt.getMonth() === month && dt.getFullYear() === year;
+      });
+      const r = buildGstr3b(monthInvoices, monthExpenses, month, year, monthCredits);
       setResult(r);
       setFetched(true);
       posthog.capture('gstr3b_previewed', { month: MONTHS[month], year, net: r.net.total, invoices: r.counts.invoices, expenses: r.counts.expenses });

@@ -46,6 +46,7 @@ export function buildGstr3b(
   expenses: ExpenseLike[],
   month: number,
   year: number,
+  creditNotes: Array<{ amount?: number; gstRate?: string | number; isIntraState?: boolean }> = [],
 ): Gstr3bResult {
   const warnings: Gstr3bWarning[] = [];
 
@@ -68,6 +69,26 @@ export function buildGstr3b(
     } else {
       oIgst += tax;
     }
+  }
+
+  // Credit notes reduce outward supplies and output tax for the period.
+  let creditTaxable = 0;
+  for (const cn of creditNotes) {
+    const taxable = round2(Number(cn.amount) || 0);
+    const rate = parseFloat(String(cn.gstRate)) || 0;
+    const tax = round2(taxable * rate / 100);
+    creditTaxable += taxable;
+    oTaxable -= taxable;
+    oTax -= tax;
+    if (cn.isIntraState === false) {
+      oIgst -= tax;
+    } else {
+      oCgst -= round2(tax / 2);
+      oSgst -= round2(tax / 2);
+    }
+  }
+  if (creditTaxable > 0) {
+    warnings.push({ message: `Credit notes worth Rs. ${round2(creditTaxable).toLocaleString('en-IN')} taxable value have been deducted from your outward supplies for this period.` });
   }
 
   // Eligible ITC from expenses (input GST embedded in the inclusive amount).

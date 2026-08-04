@@ -43,9 +43,19 @@ export default function Gstr1Page() {
         })
         .sort((a: any, b: any) => (a.date || '').localeCompare(b.date || ''));
 
+      const cq = query(collection(db, 'creditNotes'), where('userId', '==', user.uid));
+      const csnap = await getDocs(cq);
+      const monthCredits = csnap.docs
+        .map(d => ({ id: d.id, ...d.data() } as any))
+        .filter((cn: any) => {
+          if (!cn.date) return false;
+          const dt = new Date(cn.date);
+          return dt.getMonth() === month && dt.getFullYear() === year;
+        });
+
       const pSnap = await getDoc(doc(db, 'profiles', user.uid));
       const prof = pSnap.exists() ? pSnap.data() : (profile || {});
-      const r = buildGstr1(monthInvoices, prof as any, month, year);
+      const r = buildGstr1(monthInvoices, prof as any, month, year, monthCredits);
       setResult(r);
       setFetched(true);
       posthog.capture('gstr1_previewed', {
@@ -87,6 +97,7 @@ export default function Gstr1Page() {
       ['B2B', result.b2b.length, sum(result.b2b, 'txval'), sum(result.b2b, 'iamt'), sum(result.b2b, 'camt'), sum(result.b2b, 'samt')],
       ['B2CL', result.b2cl.length, sum(result.b2cl, 'txval'), sum(result.b2cl, 'iamt'), 0, 0],
       ['B2CS', result.b2cs.length, sum(result.b2cs, 'txval'), sum(result.b2cs, 'iamt'), sum(result.b2cs, 'camt'), sum(result.b2cs, 'samt')],
+      ['CDNR (credit notes)', result.cdnr.length, -sum(result.cdnr, 'txval'), -sum(result.cdnr, 'iamt'), -sum(result.cdnr, 'camt'), -sum(result.cdnr, 'samt')],
       [],
       ['TOTAL', result.totals.count, result.totals.taxable, result.totals.igst, result.totals.cgst, result.totals.sgst],
       ['Total Invoice Value', '', result.totals.invoiceValue],
@@ -104,6 +115,10 @@ export default function Gstr1Page() {
     const b2cs = [['Type','Place Of Supply','Rate','Taxable Value','IGST','CGST','SGST']];
     result.b2cs.forEach(r => b2cs.push([r.sply_ty, r.posLabel, r.rate, r.txval, r.iamt, r.camt, r.samt] as any));
     XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(b2cs), 'B2CS');
+
+    const cdnr = [['GSTIN of Recipient','Receiver Name','Note Number','Note Date','Note Type','Original Invoice Number','Original Invoice Date','Place Of Supply','Note Value','Rate','Taxable Value','IGST','CGST','SGST']];
+    result.cdnr.forEach(r => cdnr.push([r.ctin, r.clientName, r.nt_num, r.nt_dt, 'C', r.inum, r.idt, r.posLabel, r.val, r.rate, r.txval, r.iamt, r.camt, r.samt] as any));
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(cdnr), 'CDNR');
 
     const hsn = [['HSN/SAC','Description','UQC','Total Quantity','Rate','Total Value','Taxable Value','IGST','CGST','SGST']];
     result.hsn.forEach(r => hsn.push([r.hsn_sc, r.desc, r.uqc, r.qty, r.rate, r.total, r.txval, r.iamt, r.camt, r.samt] as any));
@@ -350,6 +365,21 @@ export default function Gstr1Page() {
                       {result.b2cs.length === 0 ? <tr><td colSpan={7} className="empty-row">None</td></tr> :
                         result.b2cs.map((r, i) => (
                           <tr key={i}><td>{r.sply_ty}</td><td>{r.pos}</td><td>{r.rate}%</td><td className="num">{r.txval.toLocaleString('en-IN')}</td><td className="num">{r.iamt.toLocaleString('en-IN')}</td><td className="num">{r.camt.toLocaleString('en-IN')}</td><td className="num">{r.samt.toLocaleString('en-IN')}</td></tr>
+                        ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              <div className="card">
+                <div className="card-header"><h3>CDNR — Credit Notes</h3><span>{result.cdnr.length} record{result.cdnr.length !== 1 ? 's' : ''}</span></div>
+                <div className="table-wrap">
+                  <table>
+                    <thead><tr><th>GSTIN</th><th>Client</th><th>Note</th><th>Date</th><th>Against</th><th>Rate</th><th className="num">Taxable</th><th className="num">IGST</th><th className="num">CGST</th><th className="num">SGST</th></tr></thead>
+                    <tbody>
+                      {result.cdnr.length === 0 ? <tr><td colSpan={10} className="empty-row">None</td></tr> :
+                        result.cdnr.map((r, i) => (
+                          <tr key={i}><td>{r.ctin}</td><td>{r.clientName || '—'}</td><td style={{ color: '#dc2626', fontWeight: 500 }}>{r.nt_num}</td><td>{r.nt_dt}</td><td>{r.inum || '—'}</td><td>{r.rate}%</td><td className="num">-{r.txval.toLocaleString('en-IN')}</td><td className="num">-{r.iamt.toLocaleString('en-IN')}</td><td className="num">-{r.camt.toLocaleString('en-IN')}</td><td className="num">-{r.samt.toLocaleString('en-IN')}</td></tr>
                         ))}
                     </tbody>
                   </table>

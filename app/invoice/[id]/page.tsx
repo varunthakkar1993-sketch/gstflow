@@ -4,9 +4,11 @@ import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import { onAuthStateChanged } from 'firebase/auth';
 import { auth, db } from '../../../lib/firebase';
-import { doc, getDoc } from 'firebase/firestore';
+import { doc, getDoc, updateDoc } from 'firebase/firestore';
 import jsPDF from 'jspdf';
 import QRCode from 'qrcode';
+import posthog from 'posthog-js';
+import { paymentStatus, balanceDue } from '../../../lib/recurring';
 
 export default function InvoiceDetail() {
   const params = useParams();
@@ -17,6 +19,7 @@ export default function InvoiceDetail() {
   const [loading, setLoading] = useState(true);
   const [downloading, setDownloading] = useState(false);
   const [sending, setSending] = useState(false);
+  const [saving, setSaving] = useState(false);
   const [user, setUser] = useState<any>(null);
   const [showMenu, setShowMenu] = useState(false);
 
@@ -68,8 +71,23 @@ export default function InvoiceDetail() {
     doc2.text('Amount (Rs.)', pageWidth - 20, y, { align: 'right' });
     y += 5; doc2.setLineWidth(0.3); doc2.line(20, y, pageWidth - 20, y); y += 7;
     doc2.setFont('helvetica', 'normal');
-    doc2.text(invoice.description || '', 20, y);
-    doc2.text((invoice.amount || 0).toLocaleString('en-IN'), pageWidth - 20, y, { align: 'right' }); y += 10;
+    const lineItems = Array.isArray(invoice.items) && invoice.items.length
+      ? invoice.items
+      : [{ description: invoice.description || '', amount: invoice.amount || 0 }];
+    lineItems.forEach((it: any) => {
+      const lines = doc2.splitTextToSize(it.description || '-', pageWidth - 75);
+      doc2.text(lines, 20, y);
+      doc2.text((Number(it.amount) || 0).toLocaleString('en-IN'), pageWidth - 20, y, { align: 'right' });
+      y += Math.max(8, lines.length * 5 + 3);
+    });
+    if (lineItems.length > 1) {
+      doc2.setFont('helvetica', 'bold');
+      doc2.text('Subtotal', 20, y);
+      doc2.text((invoice.amount || 0).toLocaleString('en-IN'), pageWidth - 20, y, { align: 'right' });
+      doc2.setFont('helvetica', 'normal');
+      y += 8;
+    }
+    y += 2;
     const taxAmount = (invoice.amount || 0) * (parseFloat(invoice.gstRate) / 100);
     doc2.line(20, y, pageWidth - 20, y); y += 7;
     doc2.setFont('helvetica', 'bold');
@@ -146,6 +164,71 @@ export default function InvoiceDetail() {
     window.open(`https://wa.me/?text=${msg}`, '_blank');
   };
 
+  // Record a full or partial payment against this invoice.
+  const recordPayment = async () => {
+    const outstanding = balanceDue(invoice.total || 0, invoice.amountPaid || 0);
+    const entry = prompt(`Amount received (Rs.). Balance due is ${outstanding.toLocaleString('en-IN')}.`, String(outstanding));
+    if (entry === null) return;
+    const amt = parseFloat(entry);
+    if (isNaN(amt) || amt <= 0) { alert('Enter a valid amount.'); return; }
+    const newPaid = Math.round(((Number(invoice.amountPaid) || 0) + amt + Number.EPSILON) * 100) / 100;
+    const newStatus = paymentStatus(invoice.total || 0, newPaid);
+    setSaving(true);
+    try {
+      await updateDoc(doc(db, 'invoices', id), { amountPaid: newPaid, status: newStatus });
+      setInvoice((prev: any) => ({ ...prev, amountPaid: newPaid, status: newStatus }));
+      posthog.capture('payment_recorded', { invoice_number: invoice.invoiceNumber, amount: amt, new_status: newStatus });
+    } catch {
+      alert('Could not record the payment.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const reminderText = () => {
+    const bal = balanceDue(invoice.total || 0, invoice.amountPaid || 0);
+    return `Hi ${invoice.clientName}, a gentle reminder that invoice ${invoice.invoiceNumber} dated ${invoice.date} from ${profile?.businessName || 'Paavti'} has Rs. ${bal.toLocaleString('en-IN')} outstanding. Please arrange payment at your convenience. Thank you!`;
+  };
+
+  const remindWhatsApp = () => {
+    posthog.capture('reminder_whatsapped', { invoice_number: invoice.invoiceNumber });
+    window.open(`https://wa.me/?text=${encodeURIComponent(reminderText())}`, '_blank');
+  };
+
+  const remindEmail = async () => {
+    if (!invoice.clientEmail) { alert('No client email on this invoice.'); return; }
+    setSending(true);
+    try {
+      const doc2 = await buildPDF();
+      const base64 = doc2.output('datauristring').split(',')[1];
+      const idToken = await auth.currentUser?.getIdToken();
+      const bal = balanceDue(invoice.total || 0, invoice.amountPaid || 0);
+      const res = await fetch('/api/send-invoice', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${idToken}` },
+        body: JSON.stringify({
+          to: invoice.clientEmail,
+          subject: `Payment reminder: invoice ${invoice.invoiceNumber}`,
+          invoiceNumber: invoice.invoiceNumber,
+          clientName: invoice.clientName,
+          businessName: profile?.businessName || 'Paavti',
+          total: bal.toLocaleString('en-IN'),
+          date: invoice.date,
+          pdfBase64: base64,
+          docType: 'reminder',
+        }),
+      });
+      if (res.ok) {
+        posthog.capture('reminder_emailed', { invoice_number: invoice.invoiceNumber, balance: bal });
+        alert('✅ Reminder sent.');
+      } else alert('Failed to send reminder.');
+    } catch {
+      alert('Failed to send reminder.');
+    } finally {
+      setSending(false);
+    }
+  };
+
   if (loading) return (
     <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#f0f4ff' }}>
       <div style={{ width: 40, height: 40, border: '3px solid #2563eb', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
@@ -205,6 +288,8 @@ export default function InvoiceDetail() {
   );
 
   const taxAmount = (invoice.amount || 0) * (parseFloat(invoice.gstRate) / 100);
+  const outstanding = balanceDue(invoice.total || 0, invoice.amountPaid || 0);
+  const derivedStatus = paymentStatus(invoice.total || 0, invoice.amountPaid || 0);
 
   return (
     <>
@@ -334,11 +419,11 @@ export default function InvoiceDetail() {
                 <div className="inv-meta">{invoice.date} · {invoice.clientName || '—'}</div>
               </div>
               <span className="status-badge" style={
-                invoice.status === 'paid' ? { background: '#dcfce7', color: '#16a34a' } :
-                invoice.status === 'unpaid' ? { background: '#fee2e2', color: '#dc2626' } :
-                { background: '#dbeafe', color: '#1d4ed8' }
+                derivedStatus === 'paid' ? { background: '#dcfce7', color: '#16a34a' } :
+                derivedStatus === 'partial' ? { background: '#fff7ed', color: '#d97706' } :
+                { background: '#fee2e2', color: '#dc2626' }
               }>
-                {invoice.status === 'paid' ? '✓ Paid' : invoice.status === 'unpaid' ? '⚠ Unpaid' : '→ Sent'}
+                {derivedStatus === 'paid' ? '✓ Paid' : derivedStatus === 'partial' ? '◑ Part paid' : '⚠ Unpaid'}
               </span>
             </div>
 
@@ -367,19 +452,30 @@ export default function InvoiceDetail() {
                   </tr>
                 </thead>
                 <tbody>
-                  <tr>
-                    <td>{invoice.description}</td>
-                    <td>Rs. {(invoice.amount || 0).toLocaleString('en-IN')}</td>
-                  </tr>
+                  {(Array.isArray(invoice.items) && invoice.items.length
+                    ? invoice.items
+                    : [{ description: invoice.description, amount: invoice.amount }]
+                  ).map((it: any, i: number) => (
+                    <tr key={i}>
+                      <td>{it.description || '—'}</td>
+                      <td>Rs. {(Number(it.amount) || 0).toLocaleString('en-IN')}</td>
+                    </tr>
+                  ))}
+                  {Array.isArray(invoice.items) && invoice.items.length > 1 && (
+                    <tr>
+                      <td style={{ fontWeight: 600 }}>Subtotal</td>
+                      <td style={{ fontWeight: 600 }}>Rs. {(invoice.amount || 0).toLocaleString('en-IN')}</td>
+                    </tr>
+                  )}
                   {invoice.isIntraState ? (
                     <>
                       <tr>
                         <td style={{ color: '#9ca3af' }}>CGST ({parseFloat(invoice.gstRate) / 2}%)</td>
-                        <td style={{ color: '#9ca3af' }}>Rs. {taxAmount.toFixed(2)}</td>
+                        <td style={{ color: '#9ca3af' }}>Rs. {(taxAmount / 2).toFixed(2)}</td>
                       </tr>
                       <tr>
                         <td style={{ color: '#9ca3af' }}>SGST ({parseFloat(invoice.gstRate) / 2}%)</td>
-                        <td style={{ color: '#9ca3af' }}>Rs. {taxAmount.toFixed(2)}</td>
+                        <td style={{ color: '#9ca3af' }}>Rs. {(taxAmount / 2).toFixed(2)}</td>
                       </tr>
                     </>
                   ) : (
@@ -395,6 +491,17 @@ export default function InvoiceDetail() {
                 <div className="inv-total-label">Total</div>
                 <div className="inv-total-value">Rs. {(invoice.total || 0).toLocaleString('en-IN')}</div>
               </div>
+
+              {(invoice.amountPaid || 0) > 0 && (
+                <div style={{ marginTop: 12, paddingTop: 12, borderTop: '1px solid #f0f4ff' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13.5, color: '#16a34a', marginBottom: 6 }}>
+                    <span>Received</span><span>Rs. {(invoice.amountPaid || 0).toLocaleString('en-IN')}</span>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 14, fontWeight: 600, color: outstanding > 0 ? '#d97706' : '#16a34a' }}>
+                    <span>Balance due</span><span>Rs. {outstanding.toLocaleString('en-IN')}</span>
+                  </div>
+                </div>
+              )}
             </div>
 
             <div className="action-bar">
@@ -410,6 +517,18 @@ export default function InvoiceDetail() {
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>
                 WhatsApp
               </button>
+              {outstanding > 0 && (
+                <>
+                  <button onClick={recordPayment} disabled={saving} className="btn btn-green">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 1v22"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+                    {saving ? 'Saving…' : 'Record Payment'}
+                  </button>
+                  <button onClick={remindEmail} disabled={sending} className="btn btn-outline">Send Reminder</button>
+                  <button onClick={remindWhatsApp} className="btn btn-outline">Remind on WhatsApp</button>
+                </>
+              )}
+              <a href={`/editor?edit=${invoice.id}`} className="btn btn-outline">Edit</a>
+              <a href={`/credit-note-editor?invoice=${invoice.id}`} className="btn btn-outline">Credit Note</a>
               <a href="/dashboard" className="btn btn-outline">← Back</a>
             </div>
           </div>

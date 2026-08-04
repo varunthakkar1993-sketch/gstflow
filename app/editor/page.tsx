@@ -3,11 +3,12 @@
 import { useEffect, useState } from 'react';
 import { onAuthStateChanged } from 'firebase/auth';
 import { auth, db } from '../../lib/firebase';
-import { collection, addDoc, serverTimestamp, doc, getDoc, query, where, getCountFromServer } from 'firebase/firestore';
+import { collection, addDoc, updateDoc, serverTimestamp, doc, getDoc, query, where, getCountFromServer } from 'firebase/firestore';
 import jsPDF from 'jspdf';
 import QRCode from 'qrcode';
 import posthog from 'posthog-js';
 import { validateEmail, validateGSTIN, validateHSN, normalizeGSTIN } from '../../lib/validators';
+import { nextDueDate, FREQUENCY_LABELS, Frequency } from '../../lib/recurring';
 
 export default function InvoiceEditor() {
   const [user, setUser] = useState<any>(null);
@@ -17,6 +18,7 @@ export default function InvoiceEditor() {
   const [invoiceSaved, setInvoiceSaved] = useState(false);
   const [pdfBase64, setPdfBase64] = useState('');
   const [sending, setSending] = useState(false);
+  const [editId, setEditId] = useState('');
 
   const [invoiceData, setInvoiceData] = useState({
     invoiceNumber: '',
@@ -25,13 +27,13 @@ export default function InvoiceEditor() {
     clientEmail: '',
     clientAddress: '',
     clientGSTIN: '',
-    description: '',
-    amount: '',
     isIntraState: 'true',
     gstRate: '18',
     hsn: '',
     unit: 'OTH',
+    recurring: 'none',
   });
+  const [items, setItems] = useState<{ description: string; amount: string }[]>([{ description: '', amount: '' }]);
 
   useEffect(() => {
     onAuthStateChanged(auth, async (currentUser) => {
@@ -39,25 +41,42 @@ export default function InvoiceEditor() {
       setUser(currentUser);
       const profileSnap = await getDoc(doc(db, 'profiles', currentUser.uid));
       if (profileSnap.exists()) setProfile(profileSnap.data());
+
+      // Edit mode: load the existing invoice instead of starting a new one.
+      const editParam = typeof window !== 'undefined'
+        ? new URLSearchParams(window.location.search).get('edit') : null;
+      if (editParam) {
+        const snap = await getDoc(doc(db, 'invoices', editParam));
+        if (snap.exists()) {
+          const inv: any = snap.data();
+          setEditId(editParam);
+          setInvoiceData({
+            invoiceNumber: inv.invoiceNumber || '',
+            date: inv.date || new Date().toISOString().split('T')[0],
+            clientName: inv.clientName || '',
+            clientEmail: inv.clientEmail || '',
+            clientAddress: inv.clientAddress || '',
+            clientGSTIN: inv.clientGSTIN || '',
+            isIntraState: inv.isIntraState === false ? 'false' : 'true',
+            gstRate: String(inv.gstRate ?? '18'),
+            hsn: inv.hsn || '',
+            unit: inv.unit || 'OTH',
+            recurring: inv.recurring || 'none',
+          });
+          setItems(
+            Array.isArray(inv.items) && inv.items.length
+              ? inv.items.map((it: any) => ({ description: it.description || '', amount: String(it.amount ?? '') }))
+              : [{ description: inv.description || '', amount: String(inv.amount ?? '') }]
+          );
+        }
+        return;
+      }
+
       const q = query(collection(db, 'invoices'), where('userId', '==', currentUser.uid));
       const countSnap = await getCountFromServer(q);
       const count = countSnap.data().count + 1;
       const invoiceNumber = `INV-${String(count).padStart(3, '0')}`;
-      // Always reset form — from_quote useEffect handles pre-fill separately
-      setInvoiceData({
-        invoiceNumber,
-        date: new Date().toISOString().split('T')[0],
-        clientName: '',
-        clientEmail: '',
-        clientAddress: '',
-        clientGSTIN: '',
-        description: '',
-        amount: '',
-        isIntraState: 'true',
-        gstRate: '18',
-        hsn: '',
-        unit: 'OTH',
-      });
+      setInvoiceData(prev => ({ ...prev, invoiceNumber }));
     });
   }, []);
 
@@ -71,30 +90,41 @@ export default function InvoiceEditor() {
     const clientAddress = params.get('clientAddress') || '';
     const amount = params.get('amount') || '';
 
+    const description = params.get('description') || '';
+
     if (fromQuote) {
-      // Fetch quote from Firestore and pre-fill
+      // Fetch quote from Firestore and pre-fill, carrying its line items across.
       import('firebase/firestore').then(({ doc, getDoc }) => {
         getDoc(doc(db, 'quotes', fromQuote)).then(snap => {
           if (snap.exists()) {
-            const q = snap.data();
+            const q: any = snap.data();
             setInvoiceData(prev => ({
               ...prev,
               clientName: q.clientName || '',
               clientEmail: q.clientEmail || '',
               clientAddress: q.clientAddress || '',
-              amount: String(q.total || '5000'),
+              clientGSTIN: q.clientGSTIN || '',
             }));
+            if (Array.isArray(q.items) && q.items.length) {
+              setItems(q.items.map((it: any) => ({ description: it.description || '', amount: String(it.amount ?? '') })));
+            } else if (q.total) {
+              setItems([{ description: q.description || 'Services', amount: String(q.total) }]);
+            }
           }
         });
       });
-    } else if (clientName || clientEmail || clientAddress || amount) {
-      setInvoiceData(prev => ({
-        ...prev,
-        ...(clientName && { clientName }),
-        ...(clientEmail && { clientEmail }),
-        ...(clientAddress && { clientAddress }),
-        ...(amount && { amount }),
-      }));
+    } else {
+      if (clientName || clientEmail || clientAddress) {
+        setInvoiceData(prev => ({
+          ...prev,
+          ...(clientName && { clientName }),
+          ...(clientEmail && { clientEmail }),
+          ...(clientAddress && { clientAddress }),
+        }));
+      }
+      if (description || amount) {
+        setItems([{ description, amount }]);
+      }
     }
   }, []);
 
@@ -108,7 +138,14 @@ export default function InvoiceEditor() {
     if (name === 'hsn') setErrors(p => ({ ...p, hsn: validateHSN(value) }));
   };
 
-  const subtotal = parseFloat(invoiceData.amount) || 0;
+  const updateItem = (i: number, field: 'description' | 'amount', value: string) => {
+    setItems(prev => prev.map((it, idx) => idx === i ? { ...it, [field]: value } : it));
+  };
+  const addItem = () => setItems(prev => [...prev, { description: '', amount: '' }]);
+  const removeItem = (i: number) => setItems(prev => prev.length === 1 ? prev : prev.filter((_, idx) => idx !== i));
+
+  const filledItems = items.filter(it => it.description.trim() || it.amount);
+  const subtotal = items.reduce((sum, it) => sum + (parseFloat(it.amount) || 0), 0);
   const rate = parseFloat(invoiceData.gstRate) / 100 || 0;
   const taxAmount = subtotal * rate;
   const isIntra = invoiceData.isIntraState === 'true';
@@ -188,12 +225,28 @@ export default function InvoiceEditor() {
     doc2.text('AMOUNT (Rs.)', pageWidth - 18, y + 2, { align: 'right' });
     y += 12;
 
-    // Item row
+    // Item rows
     doc2.setFont('helvetica', 'normal'); doc2.setFontSize(9);
     doc2.setTextColor(30, 40, 60);
-    doc2.text(invoiceData.description, 18, y);
-    doc2.text(subtotal.toLocaleString('en-IN'), pageWidth - 18, y, { align: 'right' });
-    y += 8;
+    (filledItems.length ? filledItems : [{ description: '', amount: '0' }]).forEach(item => {
+      if (y > pageHeight - 60) { doc2.addPage(); y = 20; }
+      const lines = doc2.splitTextToSize(item.description || '-', pageWidth - 70);
+      doc2.text(lines, 18, y);
+      doc2.text((parseFloat(item.amount) || 0).toLocaleString('en-IN'), pageWidth - 18, y, { align: 'right' });
+      y += Math.max(8, lines.length * 5 + 3);
+    });
+
+    // Subtotal row when there is more than one line
+    if (filledItems.length > 1) {
+      doc2.setDrawColor(220, 225, 235); doc2.setLineWidth(0.3);
+      doc2.line(14, y - 2, pageWidth - 14, y - 2); y += 4;
+      doc2.setFont('helvetica', 'bold'); doc2.setFontSize(8.5);
+      doc2.setTextColor(15, 31, 92);
+      doc2.text('Subtotal', 18, y);
+      doc2.text(subtotal.toLocaleString('en-IN'), pageWidth - 18, y, { align: 'right' });
+      doc2.setFont('helvetica', 'normal');
+      y += 6;
+    }
 
     // Tax rows
     doc2.setDrawColor(220, 225, 235);
@@ -262,6 +315,7 @@ export default function InvoiceEditor() {
     };
     setErrors(newErrors);
     if (Object.values(newErrors).some(Boolean)) return;
+    if (filledItems.length === 0) { alert('Add at least one line item.'); return; }
 
     setLoading(true);
     try {
@@ -269,7 +323,8 @@ export default function InvoiceEditor() {
       doc2.save(`Paavti-${invoiceData.invoiceNumber}.pdf`);
       const base64 = doc2.output('datauristring').split(',')[1];
       setPdfBase64(base64);
-      await addDoc(collection(db, 'invoices'), {
+
+      const payload: any = {
         userId: user.uid,
         invoiceNumber: invoiceData.invoiceNumber,
         date: invoiceData.date,
@@ -277,21 +332,38 @@ export default function InvoiceEditor() {
         clientEmail: invoiceData.clientEmail,
         clientAddress: invoiceData.clientAddress,
         clientGSTIN: normalizeGSTIN(invoiceData.clientGSTIN),
-        description: invoiceData.description,
+        items: filledItems.map(it => ({ description: it.description, amount: parseFloat(it.amount) || 0 })),
+        // description kept as a joined summary so older screens and lists still read fine
+        description: filledItems.map(it => it.description).filter(Boolean).join(', '),
         amount: subtotal,
         gstRate: invoiceData.gstRate,
         isIntraState: isIntra,
         total: total,
         hsn: invoiceData.hsn || '',
         unit: invoiceData.unit || 'OTH',
-        createdAt: serverTimestamp(),
-      });
-      posthog.capture('invoice_generated', {
+        recurring: invoiceData.recurring || 'none',
+        nextDue: nextDueDate(invoiceData.date, invoiceData.recurring),
+      };
+
+      if (editId) {
+        await updateDoc(doc(db, 'invoices', editId), payload);
+      } else {
+        await addDoc(collection(db, 'invoices'), {
+          ...payload,
+          amountPaid: 0,
+          status: 'unpaid',
+          createdAt: serverTimestamp(),
+        });
+      }
+
+      posthog.capture(editId ? 'invoice_updated' : 'invoice_generated', {
         invoice_number: invoiceData.invoiceNumber,
         total,
         subtotal,
+        line_items: filledItems.length,
         gst_rate: invoiceData.gstRate,
         is_intra_state: isIntra,
+        recurring: invoiceData.recurring,
         has_client_email: !!invoiceData.clientEmail,
         has_gstin: !!invoiceData.clientGSTIN,
       });
@@ -377,6 +449,15 @@ export default function InvoiceEditor() {
         .field input:focus, .field textarea:focus, .field select:focus { border-color: #2563eb; box-shadow: 0 0 0 3px rgba(37,99,235,0.08); }
         .field input.invalid { border-color: #dc2626; }
         .field-error { color: #dc2626; font-size: 12px; margin-top: 5px; }
+        .item-row { display: grid; grid-template-columns: 1fr 150px 38px; gap: 10px; align-items: center; margin-bottom: 10px; }
+        .item-row input { width: 100%; padding: 10px 14px; border: 1.5px solid #e5e9f5; border-radius: 8px; font-size: 14px; font-family: 'DM Sans', sans-serif; color: #111827; outline: none; }
+        .item-row input:focus { border-color: #2563eb; box-shadow: 0 0 0 3px rgba(37,99,235,0.08); }
+        .item-remove { height: 40px; background: #fef2f2; color: #dc2626; border: none; border-radius: 8px; cursor: pointer; font-size: 18px; line-height: 1; }
+        .item-remove:hover { background: #fee2e2; }
+        .item-remove:disabled { opacity: 0.4; cursor: not-allowed; }
+        .add-item { width: 100%; background: #f0f4ff; color: #2563eb; border: 1.5px dashed #bcd0f5; padding: 10px; border-radius: 8px; cursor: pointer; font-weight: 500; font-size: 13.5px; font-family: 'DM Sans', sans-serif; }
+        .add-item:hover { background: #e5edff; }
+        @media (max-width: 768px) { .item-row { grid-template-columns: 1fr 100px 34px; gap: 6px; } }
         .field input.readonly { background: #f8faff; color: #6b7280; }
         .field textarea { resize: vertical; min-height: 80px; }
         .summary-card { background: #fff; border-radius: 12px; border: 1px solid #e5e9f5; position: sticky; top: 24px; }
@@ -486,8 +567,8 @@ export default function InvoiceEditor() {
 
         <main className="main">
           <div className="page-header">
-            <h2>New Invoice</h2>
-            <p>Fill in the details below to generate a GST-compliant invoice.</p>
+            <h2>{editId ? `Edit ${invoiceData.invoiceNumber}` : 'New Invoice'}</h2>
+            <p>{editId ? 'Update this invoice and download the corrected PDF.' : 'Fill in the details below to generate a GST-compliant invoice.'}</p>
           </div>
 
           {!profile && (
@@ -562,11 +643,17 @@ export default function InvoiceEditor() {
                   <h3>Billing Details</h3>
                 </div>
                 <div className="card-body">
-                  <div className="form-row single">
-                    <div className="field">
-                      <label>Description</label>
-                      <textarea name="description" value={invoiceData.description} onChange={handleChange} />
+                  <label style={{ display: 'block', fontSize: 12.5, fontWeight: 500, color: '#374151', marginBottom: 8 }}>Line Items</label>
+                  {items.map((item, i) => (
+                    <div className="item-row" key={i}>
+                      <input value={item.description} onChange={e => updateItem(i, 'description', e.target.value)} placeholder="Description of item or service" />
+                      <input type="number" value={item.amount} onChange={e => updateItem(i, 'amount', e.target.value)} placeholder="Amount" />
+                      <button type="button" className="item-remove" onClick={() => removeItem(i)} disabled={items.length === 1} title="Remove">×</button>
                     </div>
+                  ))}
+                  <button type="button" className="add-item" onClick={addItem}>+ Add line item</button>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13.5, fontWeight: 600, color: '#0f1f5c', margin: '14px 2px 18px' }}>
+                    <span>Subtotal</span><span>Rs. {subtotal.toLocaleString('en-IN')}</span>
                   </div>
                   <div className="form-row">
                     <div className="field">
@@ -591,10 +678,6 @@ export default function InvoiceEditor() {
                   </div>
                   <div className="form-row">
                     <div className="field">
-                      <label>Subtotal (Rs.)</label>
-                      <input type="number" name="amount" value={invoiceData.amount} onChange={handleChange} />
-                    </div>
-                    <div className="field">
                       <label>GST Rate</label>
                       <select name="gstRate" value={invoiceData.gstRate} onChange={handleChange}>
                         <option value="0">0% — Exempt</option>
@@ -604,14 +687,27 @@ export default function InvoiceEditor() {
                         <option value="28">28% — Luxury</option>
                       </select>
                     </div>
-                  </div>
-                  <div className="form-row single">
                     <div className="field">
                       <label>GST Type</label>
                       <select name="isIntraState" value={invoiceData.isIntraState} onChange={handleChange}>
                         <option value="true">Intra-State — CGST + SGST</option>
                         <option value="false">Inter-State — IGST</option>
                       </select>
+                    </div>
+                  </div>
+                  <div className="form-row single">
+                    <div className="field">
+                      <label>Repeat this invoice</label>
+                      <select name="recurring" value={invoiceData.recurring} onChange={handleChange}>
+                        {(Object.keys(FREQUENCY_LABELS) as Frequency[]).map(f => (
+                          <option key={f} value={f}>{FREQUENCY_LABELS[f]}</option>
+                        ))}
+                      </select>
+                      {invoiceData.recurring !== 'none' && (
+                        <div style={{ fontSize: 12, color: '#6b7280', marginTop: 5 }}>
+                          Next one due {nextDueDate(invoiceData.date, invoiceData.recurring)}. Your dashboard will remind you.
+                        </div>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -678,11 +774,11 @@ export default function InvoiceEditor() {
 
                   {!invoiceSaved ? (
                     <button onClick={generateAndSavePDF} disabled={loading} className="btn-primary">
-                      {loading ? 'Generating…' : '↓ Generate & Download PDF'}
+                      {loading ? 'Generating…' : editId ? '↓ Save Changes & Download' : '↓ Generate & Download PDF'}
                     </button>
                   ) : (
                     <>
-                      <div className="success-box">✅ Invoice saved successfully!</div>
+                      <div className="success-box">{editId ? '✅ Invoice updated successfully!' : '✅ Invoice saved successfully!'}</div>
                       <div className="action-btns">
                         <button onClick={generateAndSavePDF} disabled={loading} className="btn-secondary">
                           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>

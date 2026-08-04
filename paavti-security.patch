@@ -1,0 +1,333 @@
+diff --git a/app/api/razorpay-verify/route.ts b/app/api/razorpay-verify/route.ts
+index f0ae477..efcc233 100644
+--- a/app/api/razorpay-verify/route.ts
++++ b/app/api/razorpay-verify/route.ts
+@@ -1,8 +1,10 @@
+ import crypto from 'crypto';
++import Razorpay from 'razorpay';
+ import { NextRequest, NextResponse } from 'next/server';
+ import * as admin from 'firebase-admin';
+ import sgMail from '@sendgrid/mail';
+ import { getPostHogClient } from '@/lib/posthog-server';
++import { verifyAuth } from '@/lib/verify-auth';
+ 
+ sgMail.setApiKey(process.env.SENDGRID_API_KEY!);
+ 
+@@ -19,10 +21,18 @@ const db = admin.firestore();
+ 
+ export async function POST(req: NextRequest) {
+   try {
+-    const { razorpay_order_id, razorpay_payment_id, razorpay_signature, userId, plan, billing } = await req.json();
++    // Authenticate the caller from their Firebase ID token, not the request body.
++    let userId: string;
++    try {
++      userId = await verifyAuth(req);
++    } catch {
++      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
++    }
+ 
+-    if (!userId) {
+-      return NextResponse.json({ error: 'User not authenticated' }, { status: 401 });
++    const { razorpay_order_id, razorpay_payment_id, razorpay_signature } = await req.json();
++
++    if (!razorpay_order_id || !razorpay_payment_id || !razorpay_signature) {
++      return NextResponse.json({ error: 'Missing payment details' }, { status: 400 });
+     }
+ 
+     const body = razorpay_order_id + '|' + razorpay_payment_id;
+@@ -35,9 +45,26 @@ export async function POST(req: NextRequest) {
+       return NextResponse.json({ error: 'Invalid signature' }, { status: 400 });
+     }
+ 
++    // Derive plan/billing/amount from the ACTUAL order on Razorpay, never from
++    // the client, so a cheap order cannot be redeemed as a more expensive plan.
++    const razorpay = new Razorpay({
++      key_id: process.env.RAZORPAY_KEY_ID!,
++      key_secret: process.env.RAZORPAY_KEY_SECRET!,
++    });
++    const order = await razorpay.orders.fetch(razorpay_order_id);
++
++    // Confirm the order was actually paid.
++    if (order.status !== 'paid') {
++      return NextResponse.json({ error: 'Order not paid' }, { status: 400 });
++    }
++
++    const plan = (order.notes?.plan as string) || 'pro';
++    const billing = (order.notes?.billing as string) || 'monthly';
++
+     await db.collection('subscriptions').doc(userId).set({
+       plan,
+       billing,
++      amountPaid: order.amount,
+       paymentId: razorpay_payment_id,
+       orderId: razorpay_order_id,
+       activatedAt: new Date().toISOString(),
+diff --git a/app/api/scan-bill/route.ts b/app/api/scan-bill/route.ts
+index 044cda5..e45b8ea 100644
+--- a/app/api/scan-bill/route.ts
++++ b/app/api/scan-bill/route.ts
+@@ -1,7 +1,18 @@
+ import { NextRequest, NextResponse } from 'next/server';
++import { verifyAuth, rateLimit } from '@/lib/verify-auth';
+ 
+ export async function POST(req: NextRequest) {
+   try {
++    let uid: string;
++    try {
++      uid = await verifyAuth(req);
++    } catch {
++      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
++    }
++    if (!rateLimit(`scan:${uid}`, 20, 60_000)) {
++      return NextResponse.json({ error: 'Too many requests. Please wait a minute.' }, { status: 429 });
++    }
++
+     const { imageBase64 } = await req.json();
+     if (!imageBase64) {
+       return NextResponse.json({ error: 'No image provided' }, { status: 400 });
+diff --git a/app/api/send-invoice/route.ts b/app/api/send-invoice/route.ts
+index 5ede59d..9f2a53c 100644
+--- a/app/api/send-invoice/route.ts
++++ b/app/api/send-invoice/route.ts
+@@ -1,11 +1,22 @@
+ import { NextRequest, NextResponse } from 'next/server';
+ import sgMail from '@sendgrid/mail';
+ import { getPostHogClient } from '@/lib/posthog-server';
++import { verifyAuth, rateLimit } from '@/lib/verify-auth';
+ 
+ sgMail.setApiKey(process.env.SENDGRID_API_KEY!);
+ 
+ export async function POST(req: NextRequest) {
+   try {
++    let uid: string;
++    try {
++      uid = await verifyAuth(req);
++    } catch {
++      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
++    }
++    if (!rateLimit(`send:${uid}`, 30, 60_000)) {
++      return NextResponse.json({ error: 'Too many requests. Please wait a minute.' }, { status: 429 });
++    }
++
+     const { to, subject, invoiceNumber, clientName, businessName, total, date, pdfBase64, docType } = await req.json();
+ 
+     const type = docType || 'invoice';
+diff --git a/app/editor/page.tsx b/app/editor/page.tsx
+index 9cceb50..52efd6a 100644
+--- a/app/editor/page.tsx
++++ b/app/editor/page.tsx
+@@ -294,9 +294,10 @@ export default function InvoiceEditor() {
+     if (!invoiceData.clientEmail) { alert('Please enter client email first.'); return; }
+     setSending(true);
+     try {
++      const idToken = await auth.currentUser?.getIdToken();
+       const res = await fetch('/api/send-invoice', {
+         method: 'POST',
+-        headers: { 'Content-Type': 'application/json' },
++        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${idToken}` },
+         body: JSON.stringify({
+           to: invoiceData.clientEmail,
+           invoiceNumber: invoiceData.invoiceNumber,
+diff --git a/app/expenses/page.tsx b/app/expenses/page.tsx
+index d9e7189..ee79e4c 100644
+--- a/app/expenses/page.tsx
++++ b/app/expenses/page.tsx
+@@ -55,9 +55,10 @@ export default function ExpensesPage() {
+     if (!billPhotoBase64) { alert('Select a bill photo first.'); return; }
+     setScanning(true);
+     try {
++      const idToken = await auth.currentUser?.getIdToken();
+       const res = await fetch('/api/scan-bill', {
+         method: 'POST',
+-        headers: { 'Content-Type': 'application/json' },
++        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${idToken}` },
+         body: JSON.stringify({ imageBase64: billPhotoBase64 }),
+       });
+       if (!res.ok) throw new Error('Scan failed');
+diff --git a/app/invoice/[id]/page.tsx b/app/invoice/[id]/page.tsx
+index e423d75..64a8d67 100644
+--- a/app/invoice/[id]/page.tsx
++++ b/app/invoice/[id]/page.tsx
+@@ -122,9 +122,10 @@ export default function InvoiceDetail() {
+     setSending(true);
+     const doc2 = await buildPDF();
+     const base64 = doc2.output('datauristring').split(',')[1];
++    const idToken = await auth.currentUser?.getIdToken();
+     const res = await fetch('/api/send-invoice', {
+       method: 'POST',
+-      headers: { 'Content-Type': 'application/json' },
++      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${idToken}` },
+       body: JSON.stringify({
+         to: invoice.clientEmail,
+         invoiceNumber: invoice.invoiceNumber,
+diff --git a/app/pricing/page.tsx b/app/pricing/page.tsx
+index eb18d76..a0643bc 100644
+--- a/app/pricing/page.tsx
++++ b/app/pricing/page.tsx
+@@ -53,14 +53,14 @@ export default function PricingPage() {
+         description: `Pro ${billingType === 'lifetime' ? 'Lifetime' : billingType === 'yearly' ? 'Yearly' : 'Monthly'} Plan`,
+         order_id: orderId,
+         handler: async (response: any) => {
++          const idToken = await auth.currentUser?.getIdToken();
+           const verify = await fetch('/api/razorpay-verify', {
+             method: 'POST',
+-            headers: { 'Content-Type': 'application/json' },
++            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${idToken}` },
+             body: JSON.stringify({
+-              ...response,
+-              userId: user.uid,
+-              plan,
+-              billing: billingType,
++              razorpay_order_id: response.razorpay_order_id,
++              razorpay_payment_id: response.razorpay_payment_id,
++              razorpay_signature: response.razorpay_signature,
+             }),
+           });
+           const result = await verify.json();
+diff --git a/app/quote-editor/page.tsx b/app/quote-editor/page.tsx
+index 7ab607c..103a46d 100644
+--- a/app/quote-editor/page.tsx
++++ b/app/quote-editor/page.tsx
+@@ -228,9 +228,10 @@ export default function ReceiptEditor() {
+     if (!receiptData.clientEmail) { alert('Please enter client email first.'); return; }
+     setSending(true);
+     try {
++      const idToken = await auth.currentUser?.getIdToken();
+       const res = await fetch('/api/send-invoice', {
+         method: 'POST',
+-        headers: { 'Content-Type': 'application/json' },
++        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${idToken}` },
+         body: JSON.stringify({
+           to: receiptData.clientEmail,
+           invoiceNumber: receiptData.receiptNumber,
+diff --git a/app/receipt-editor/page.tsx b/app/receipt-editor/page.tsx
+index 5d43597..5eb3447 100644
+--- a/app/receipt-editor/page.tsx
++++ b/app/receipt-editor/page.tsx
+@@ -228,9 +228,10 @@ export default function ReceiptEditor() {
+     if (!receiptData.clientEmail) { alert('Please enter client email first.'); return; }
+     setSending(true);
+     try {
++      const idToken = await auth.currentUser?.getIdToken();
+       const res = await fetch('/api/send-invoice', {
+         method: 'POST',
+-        headers: { 'Content-Type': 'application/json' },
++        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${idToken}` },
+         body: JSON.stringify({
+           to: receiptData.clientEmail,
+           invoiceNumber: receiptData.receiptNumber,
+diff --git a/firestore.rules b/firestore.rules
+index dc1bed6..7a395fd 100644
+--- a/firestore.rules
++++ b/firestore.rules
+@@ -4,8 +4,11 @@ service cloud.firestore {
+     match /invoices/{invoiceId} {
+       allow create: if request.auth != null
+                     && request.resource.data.userId == request.auth.uid;
+-      allow read, update, delete: if request.auth != null
++      allow read, delete: if request.auth != null
+                                    && resource.data.userId == request.auth.uid;
++      allow update: if request.auth != null
++                    && resource.data.userId == request.auth.uid
++                    && request.resource.data.userId == request.auth.uid;
+     }
+     match /profiles/{userId} {
+       allow read, write: if request.auth != null
+@@ -14,26 +17,38 @@ service cloud.firestore {
+     match /quotes/{quoteId} {
+       allow create: if request.auth != null
+                     && request.resource.data.userId == request.auth.uid;
+-      allow read, update, delete: if request.auth != null
++      allow read, delete: if request.auth != null
+                                    && resource.data.userId == request.auth.uid;
++      allow update: if request.auth != null
++                    && resource.data.userId == request.auth.uid
++                    && request.resource.data.userId == request.auth.uid;
+     }
+     match /expenses/{expenseId} {
+       allow create: if request.auth != null
+                     && request.resource.data.userId == request.auth.uid;
+-      allow read, update, delete: if request.auth != null
++      allow read, delete: if request.auth != null
+                                    && resource.data.userId == request.auth.uid;
++      allow update: if request.auth != null
++                    && resource.data.userId == request.auth.uid
++                    && request.resource.data.userId == request.auth.uid;
+     }
+     match /clients/{clientId} {
+       allow create: if request.auth != null
+                     && request.resource.data.userId == request.auth.uid;
+-      allow read, update, delete: if request.auth != null
++      allow read, delete: if request.auth != null
+                                    && resource.data.userId == request.auth.uid;
++      allow update: if request.auth != null
++                    && resource.data.userId == request.auth.uid
++                    && request.resource.data.userId == request.auth.uid;
+     }
+     match /receipts/{receiptId} {
+       allow create: if request.auth != null
+                     && request.resource.data.userId == request.auth.uid;
+-      allow read, update, delete: if request.auth != null
++      allow read, delete: if request.auth != null
+                                    && resource.data.userId == request.auth.uid;
++      allow update: if request.auth != null
++                    && resource.data.userId == request.auth.uid
++                    && request.resource.data.userId == request.auth.uid;
+     }
+     match /subscriptions/{userId} {
+       allow read: if request.auth != null
+diff --git a/lib/verify-auth.ts b/lib/verify-auth.ts
+new file mode 100644
+index 0000000..6892d7d
+--- /dev/null
++++ b/lib/verify-auth.ts
+@@ -0,0 +1,49 @@
++// Server-side auth + basic rate limiting for API routes.
++// Verifies a Firebase ID token from the Authorization: Bearer <token> header
++// and returns the caller's uid. Throws 'UNAUTHENTICATED' if the token is
++// missing or invalid.
++
++import * as admin from 'firebase-admin';
++import { NextRequest } from 'next/server';
++
++export function getAdmin() {
++  if (!admin.apps.length) {
++    admin.initializeApp({
++      credential: admin.credential.cert({
++        projectId: process.env.FIREBASE_PROJECT_ID,
++        clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
++        privateKey: process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
++      }),
++    });
++  }
++  return admin;
++}
++
++export async function verifyAuth(req: NextRequest): Promise<string> {
++  const header = req.headers.get('authorization') || '';
++  const match = header.match(/^Bearer (.+)$/i);
++  if (!match) throw new Error('UNAUTHENTICATED');
++  try {
++    const decoded = await getAdmin().auth().verifyIdToken(match[1].trim());
++    return decoded.uid;
++  } catch {
++    throw new Error('UNAUTHENTICATED');
++  }
++}
++
++// Best-effort in-memory rate limiter. NOTE: serverless instances each have
++// their own memory, so this throttles per-instance bursts rather than global
++// traffic. It is a cheap first line of defence; move to Upstash/Redis or
++// Vercel rate limiting if abuse becomes a real problem.
++const hits = new Map<string, { count: number; reset: number }>();
++export function rateLimit(key: string, max: number, windowMs: number): boolean {
++  const now = Date.now();
++  const entry = hits.get(key);
++  if (!entry || now > entry.reset) {
++    hits.set(key, { count: 1, reset: now + windowMs });
++    return true;
++  }
++  if (entry.count >= max) return false;
++  entry.count++;
++  return true;
++}

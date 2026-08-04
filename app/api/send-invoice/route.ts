@@ -20,14 +20,33 @@ export async function POST(req: NextRequest) {
     const { to, subject, invoiceNumber, clientName, businessName, total, date, pdfBase64, docType } = await req.json();
 
     const type = docType || 'invoice';
-    const label = type === 'receipt' ? 'Receipt' : type === 'quote' ? 'Quote' : 'Invoice';
-    const lowerLabel = type === 'receipt' ? 'receipt' : type === 'quote' ? 'quote' : 'invoice';
+    const isReminder = type === 'reminder';
+    const label = type === 'receipt' ? 'Receipt'
+      : type === 'quote' ? 'Quote'
+      : type === 'creditnote' ? 'Credit Note'
+      : 'Invoice';
+    const lowerLabel = type === 'receipt' ? 'receipt'
+      : type === 'quote' ? 'quote'
+      : type === 'creditnote' ? 'credit note'
+      : 'invoice';
 
     await sgMail.send({
       to,
       from: { email: 'noreply@paavti.in', name: 'Paavti' },
-      subject: subject || `${label} ${invoiceNumber} from ${businessName}`,
-      html: `
+      subject: subject || (isReminder
+        ? `Payment reminder: invoice ${invoiceNumber}`
+        : `${label} ${invoiceNumber} from ${businessName}`),
+      html: isReminder ? `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+          <h2 style="color: #111;">Payment reminder from ${businessName}</h2>
+          <p>Dear ${clientName},</p>
+          <p>This is a gentle reminder that invoice <strong>${invoiceNumber}</strong> dated ${date} has <strong>Rs. ${total}</strong> still outstanding.</p>
+          <p>A copy of the invoice is attached for your reference. If you have already made the payment, please ignore this message.</p>
+          <br/>
+          <p>Thank you!</p>
+          <p style="color: #666; font-size: 12px;">Sent via Paavti.in</p>
+        </div>
+      ` : `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
           <h2 style="color: #111;">${label} from ${businessName}</h2>
           <p>Dear ${clientName},</p>
@@ -41,7 +60,7 @@ export async function POST(req: NextRequest) {
       attachments: [
         {
           content: pdfBase64,
-          filename: `${label}-${invoiceNumber}.pdf`,
+          filename: `${isReminder ? 'Invoice' : label}-${invoiceNumber}.pdf`,
           type: 'application/pdf',
           disposition: 'attachment',
         },

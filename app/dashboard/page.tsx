@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { onAuthStateChanged, signOut } from 'firebase/auth';
 import { auth, db } from '../../lib/firebase';
 import { collection, query, where, getDocs, orderBy, doc, updateDoc, getDoc } from 'firebase/firestore';
+import { paymentStatus, balanceDue, isDue, FREQUENCY_LABELS } from '../../lib/recurring';
 import posthog from 'posthog-js';
 
 export default function Dashboard() {
@@ -67,8 +68,15 @@ export default function Dashboard() {
   };
 
   const totalRevenue = invoices.reduce((sum, inv) => sum + (inv.total || 0), 0);
-  const paidRevenue = invoices.filter(i => i.status === 'paid').reduce((sum, inv) => sum + (inv.total || 0), 0);
-  const unpaidCount = invoices.filter(i => i.status === 'unpaid').length;
+  // Collected reflects money actually received, including part payments.
+  const paidRevenue = invoices.reduce((sum, inv) => {
+    const recorded = Number(inv.amountPaid) || 0;
+    if (recorded > 0) return sum + recorded;
+    return sum + (inv.status === 'paid' ? (inv.total || 0) : 0);
+  }, 0);
+  const unpaidCount = invoices.filter(i => paymentStatus(i.total || 0, i.amountPaid || 0) !== 'paid').length;
+  const outstandingTotal = invoices.reduce((sum, inv) => sum + balanceDue(inv.total || 0, inv.amountPaid || 0), 0);
+  const dueRecurring = invoices.filter(inv => inv.recurring && inv.recurring !== 'none' && isDue(inv.nextDue));
   const thisMonth = invoices.filter(inv => {
     if (!inv.date) return false;
     const d = new Date(inv.date);
@@ -94,12 +102,14 @@ export default function Dashboard() {
 
   const statusStyle = (status: string) => {
     if (status === 'paid') return { background: '#dcfce7', color: '#16a34a' };
+    if (status === 'partial') return { background: '#fff7ed', color: '#d97706' };
     if (status === 'unpaid') return { background: '#fee2e2', color: '#dc2626' };
     return { background: '#dbeafe', color: '#1d4ed8' };
   };
 
   const statusLabel = (status: string) => {
     if (status === 'paid') return '✓ Paid';
+    if (status === 'partial') return '◑ Part paid';
     if (status === 'unpaid') return '⚠ Unpaid';
     return '→ Sent';
   };
@@ -363,8 +373,8 @@ export default function Dashboard() {
             </div>
             <div className="stat-card red">
               <div className="stat-label">Pending</div>
-              <div className="stat-value">{unpaidCount}</div>
-              <div className="stat-sub">Unpaid invoice{unpaidCount !== 1 ? 's' : ''}</div>
+              <div className="stat-value">Rs. {Math.round(outstandingTotal).toLocaleString('en-IN')}</div>
+              <div className="stat-sub">Across {unpaidCount} unpaid invoice{unpaidCount !== 1 ? 's' : ''}</div>
             </div>
           </div>
 
@@ -411,6 +421,25 @@ export default function Dashboard() {
             </a>
           </div>
 
+          {dueRecurring.length > 0 && (
+            <div style={{ background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: 12, padding: '16px 20px', marginBottom: 24 }}>
+              <div style={{ fontSize: 13.5, fontWeight: 600, color: '#1e40af', marginBottom: 10 }}>
+                {dueRecurring.length} recurring invoice{dueRecurring.length !== 1 ? 's' : ''} due to be raised
+              </div>
+              {dueRecurring.slice(0, 4).map(inv => (
+                <div key={inv.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, padding: '7px 0', fontSize: 13, color: '#1e3a8a' }}>
+                  <span>{inv.clientName || 'Client'} · {FREQUENCY_LABELS[(inv.recurring || 'none') as keyof typeof FREQUENCY_LABELS]} · was due {inv.nextDue}</span>
+                  <a
+                    href={`/editor?clientName=${encodeURIComponent(inv.clientName || '')}&clientEmail=${encodeURIComponent(inv.clientEmail || '')}&clientAddress=${encodeURIComponent(inv.clientAddress || '')}&description=${encodeURIComponent(inv.description || '')}&amount=${inv.amount || ''}`}
+                    style={{ background: '#2563eb', color: '#fff', padding: '6px 14px', borderRadius: 7, fontSize: 12, fontWeight: 600, textDecoration: 'none', whiteSpace: 'nowrap' }}
+                  >
+                    Raise now
+                  </a>
+                </div>
+              ))}
+            </div>
+          )}
+
           <div className="section-header">
             <div className="section-title">Recent Invoices</div>
             <button onClick={handleNewInvoice} className={`new-btn ${atLimit ? 'disabled' : ''}`}>
@@ -444,13 +473,28 @@ export default function Dashboard() {
                     <div className="inv-client">{inv.clientName || '—'}</div>
                     <div className="inv-client-email">{inv.clientEmail || ''}</div>
                   </div>
-                  <div className="inv-amount">Rs. {(inv.total || 0).toLocaleString('en-IN')}</div>
+                  <div className="inv-amount">
+                    Rs. {(inv.total || 0).toLocaleString('en-IN')}
+                    {(inv.amountPaid || 0) > 0 && balanceDue(inv.total || 0, inv.amountPaid || 0) > 0 && (
+                      <div style={{ fontSize: 11, color: '#d97706', fontWeight: 500 }}>
+                        Rs. {balanceDue(inv.total || 0, inv.amountPaid || 0).toLocaleString('en-IN')} due
+                      </div>
+                    )}
+                  </div>
                   <div className="inv-date">{inv.date || '—'}</div>
                   <div>
-                    <button className="status-badge" style={statusStyle(inv.status || 'sent')} onClick={() => toggleStatus(inv)} title="Click to change status">
-                      {statusLabel(inv.status || 'sent')}
-                    </button>
-                    <div className="status-hint">click to change</div>
+                    {(inv.amountPaid || 0) > 0 ? (
+                      <a href={`/invoice/${inv.id}`} className="status-badge" style={{ ...statusStyle(paymentStatus(inv.total || 0, inv.amountPaid || 0)), textDecoration: 'none' }}>
+                        {statusLabel(paymentStatus(inv.total || 0, inv.amountPaid || 0))}
+                      </a>
+                    ) : (
+                      <>
+                        <button className="status-badge" style={statusStyle(inv.status || 'sent')} onClick={() => toggleStatus(inv)} title="Click to change status">
+                          {statusLabel(inv.status || 'sent')}
+                        </button>
+                        <div className="status-hint">click to change</div>
+                      </>
+                    )}
                   </div>
                 </div>
               ))
