@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import HomeDemo from './components/HomeDemo';
 
 export default function Home() {
   return (
@@ -46,6 +47,25 @@ export default function Home() {
         .mock-total-value { font-family: 'Lora', serif; font-size: 18px; font-weight: 700; color: #2563eb; }
         .mock-qr { width: 52px; height: 52px; background: #e5e9f5; border-radius: 6px; display: flex; align-items: center; justify-content: center; margin-top: 12px; }
         .mock-qr-inner { width: 36px; height: 36px; background: repeating-linear-gradient(45deg, #9ca3af 0px, #9ca3af 2px, transparent 2px, transparent 6px); border-radius: 2px; }
+        /* Hero invoice builds itself on a 9s loop */
+        .hero-visual { position: relative; }
+        .anim { opacity: 0; animation-duration: 9s; animation-iteration-count: infinite; animation-timing-function: ease; animation-fill-mode: both; }
+        .a1 { animation-name: kfa1; } .a2 { animation-name: kfa2; } .a3 { animation-name: kfa3; }
+        .a4 { animation-name: kfa4; } .a5 { animation-name: kfa5; } .a6 { animation-name: kfa6; }
+        .a7 { animation-name: kfa7; }
+        @keyframes kfa1 { 0%,5% { opacity: 0; transform: translateY(6px); } 9%,94% { opacity: 1; transform: none; } 98%,100% { opacity: 0; } }
+        @keyframes kfa2 { 0%,12% { opacity: 0; transform: translateY(6px); } 16%,94% { opacity: 1; transform: none; } 98%,100% { opacity: 0; } }
+        @keyframes kfa3 { 0%,21% { opacity: 0; transform: translateY(6px); } 25%,94% { opacity: 1; transform: none; } 98%,100% { opacity: 0; } }
+        @keyframes kfa4 { 0%,29% { opacity: 0; transform: translateY(6px); } 33%,94% { opacity: 1; transform: none; } 98%,100% { opacity: 0; } }
+        @keyframes kfa5 { 0%,37% { opacity: 0; transform: translateY(6px); } 41%,94% { opacity: 1; transform: none; } 98%,100% { opacity: 0; } }
+        @keyframes kfa6 { 0%,47% { opacity: 0; transform: scale(0.92); } 52%,94% { opacity: 1; transform: scale(1); } 98%,100% { opacity: 0; } }
+        @keyframes kfa7 { 0%,57% { opacity: 0; transform: translateY(6px); } 61%,94% { opacity: 1; transform: none; } 98%,100% { opacity: 0; } }
+        .paid-stamp { position: absolute; right: 22px; bottom: 64px; border: 2.5px solid #16a34a; color: #16a34a; font-weight: 700; font-size: 15px; letter-spacing: 2px; padding: 5px 14px; border-radius: 8px; background: rgba(240,253,244,0.9); opacity: 0; transform: rotate(-10deg) scale(1.6); animation: kfstamp 9s ease infinite both; }
+        @keyframes kfstamp { 0%,68% { opacity: 0; transform: rotate(-10deg) scale(1.6); } 72%,94% { opacity: 1; transform: rotate(-10deg) scale(1); } 98%,100% { opacity: 0; } }
+        @media (prefers-reduced-motion: reduce) {
+          .anim, .paid-stamp { animation: none; opacity: 1; }
+          .paid-stamp { transform: rotate(-10deg) scale(1); }
+        }
         .stats-bar { background: #0f1f5c; padding: 32px 60px; }
         .stats-inner { max-width: 1100px; margin: 0 auto; display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; }
         .stat-item { text-align: center; }
@@ -163,17 +183,17 @@ export default function Home() {
               </div>
             </div>
             <div className="mock-divider" />
-            <div className="mock-row"><span className="mock-row-label">Client</span><span className="mock-row-value">ABC Consultants</span></div>
-            <div className="mock-row"><span className="mock-row-label">Description</span><span className="mock-row-value">Web Development</span></div>
+            <div className="mock-row anim a1"><span className="mock-row-label">Client</span><span className="mock-row-value">ABC Consultants</span></div>
+            <div className="mock-row anim a2"><span className="mock-row-label">Description</span><span className="mock-row-value">Web Development</span></div>
             <div className="mock-divider" />
-            <div className="mock-row"><span className="mock-row-label">Subtotal</span><span className="mock-row-value">Rs. 5,000</span></div>
-            <div className="mock-row"><span className="mock-row-label">CGST 9%</span><span className="mock-row-value">Rs. 450</span></div>
-            <div className="mock-row"><span className="mock-row-label">SGST 9%</span><span className="mock-row-value">Rs. 450</span></div>
-            <div className="mock-total">
+            <div className="mock-row anim a3"><span className="mock-row-label">Subtotal</span><span className="mock-row-value">Rs. 5,000</span></div>
+            <div className="mock-row anim a4"><span className="mock-row-label">CGST 9%</span><span className="mock-row-value">Rs. 450</span></div>
+            <div className="mock-row anim a5"><span className="mock-row-label">SGST 9%</span><span className="mock-row-value">Rs. 450</span></div>
+            <div className="mock-total anim a6">
               <span className="mock-total-label">Total</span>
               <span className="mock-total-value">Rs. 5,900</span>
             </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginTop: 16 }}>
+            <div className="anim a7" style={{ display: 'flex', alignItems: 'center', gap: 12, marginTop: 16 }}>
               <div className="mock-qr"><div className="mock-qr-inner" /></div>
               <div>
                 <div style={{ fontSize: 11, color: '#374151', fontWeight: 500 }}>Pay via UPI</div>
@@ -181,6 +201,7 @@ export default function Home() {
               </div>
             </div>
           </div>
+          <div className="paid-stamp">PAID</div>
         </div>
       </section>
 
@@ -192,6 +213,8 @@ export default function Home() {
           <div className="stat-item"><div className="stat-num">Free</div><div className="stat-label">No hidden charges</div></div>
         </div>
       </div>
+
+      <HomeDemo />
 
       <section id="features" className="features">
         <div className="section-label">Features</div>
