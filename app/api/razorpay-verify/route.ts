@@ -1,26 +1,19 @@
 import crypto from 'crypto';
 import Razorpay from 'razorpay';
 import { NextRequest, NextResponse } from 'next/server';
-import * as admin from 'firebase-admin';
 import sgMail from '@sendgrid/mail';
 import { getPostHogClient } from '@/lib/posthog-server';
-import { verifyAuth } from '@/lib/verify-auth';
+import { getAdmin, verifyAuth } from '@/lib/verify-auth';
 
-sgMail.setApiKey(process.env.SENDGRID_API_KEY!);
-
-if (!admin.apps.length) {
-  admin.initializeApp({
-    credential: admin.credential.cert({
-      projectId: process.env.FIREBASE_PROJECT_ID,
-      clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
-      privateKey: process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
-    }),
-  });
-}
-const db = admin.firestore();
+// Nothing here initialises at module scope on purpose. Next collects page data
+// for every route at build time, so a module-scope admin.initializeApp() or
+// sgMail.setApiKey() fails the whole build on any machine without the server
+// env vars set. Both are created lazily inside the handler instead.
 
 export async function POST(req: NextRequest) {
   try {
+    const admin = getAdmin();
+    const db = admin.firestore();
     // Authenticate the caller from their Firebase ID token, not the request body.
     let userId: string;
     try {
@@ -79,6 +72,7 @@ export async function POST(req: NextRequest) {
         const planLabel = billing === 'lifetime' ? 'Lifetime Deal' : billing === 'yearly' ? 'Pro Yearly' : 'Pro Monthly';
         const amountLabel = billing === 'lifetime' ? 'Rs. 5,999 (one-time)' : billing === 'yearly' ? 'Rs. 2,499/year' : 'Rs. 299/month';
 
+        sgMail.setApiKey(process.env.SENDGRID_API_KEY || '');
         await sgMail.send({
           to: userEmail,
           from: { email: 'noreply@paavti.in', name: 'Paavti' },
