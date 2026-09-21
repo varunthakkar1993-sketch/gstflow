@@ -10,7 +10,7 @@ import posthog from "posthog-js";
  * Uses your existing `jspdf` (dynamically imported).
  */
 
-const MODES = ["Cash", "UPI", "Bank transfer", "Cheque", "Card"];
+const MODES = ["UPI", "Google Pay (GPay)", "PhonePe", "Paytm", "Cash", "Bank transfer", "Cheque", "Card"];
 
 const rs = (n: number) =>
   "Rs. " + n.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
