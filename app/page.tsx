@@ -145,22 +145,22 @@ export default function Home() {
         <div>
           <div className="hero-badge">
             <div className="trust-dot" />
-            Built for Indian Freelancers & Businesses
+            Free for Indian freelancers & small businesses
           </div>
           <h1 className="hero-title">
-            Invoices. Quotes. Expenses. <span>All in one place.</span>
+            UPI receipts and quotations, <span>ready in seconds.</span>
           </h1>
           <p className="hero-sub">
-            The complete business toolkit for Indian freelancers &amp; small businesses. GST compliant, UPI ready, built for India.
+            Make a payment receipt or quotation for free, no login needed. Create an account when you want GST invoices, proper numbering and reports ready for filing.
           </p>
           <div className="hero-actions">
-            <a href="/signup" className="btn-hero-primary">Create Free Invoice →</a>
-            <a href="/login" className="btn-hero-secondary">Login</a>
+            <a href="/payment-receipt-generator" className="btn-hero-primary">Make a Payment Receipt →</a>
+            <a href="/quotation-generator" className="btn-hero-secondary">Make a Quotation</a>
           </div>
           <div className="hero-trust">
-            <div className="trust-item"><div className="trust-dot" /> No credit card required</div>
+            <div className="trust-item"><div className="trust-dot" /> No login needed</div>
             <div className="trust-item"><div className="trust-dot" /> GST compliant</div>
-            <div className="trust-item"><div className="trust-dot" /> Free to get started</div>
+            <div className="trust-item"><div className="trust-dot" /> Free plan available</div>
           </div>
         </div>
 

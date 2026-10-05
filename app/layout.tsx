@@ -14,8 +14,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Paavti — Free GST Invoice Generator for Indian Freelancers & Businesses",
-  description: "Create GST-compliant invoices, quotes and track expenses in seconds. Free forever. UPI QR code included. Built for Indian freelancers and small businesses.",
+  title: "Paavti | Free UPI Receipt, Quotation & GST Invoice Maker",
+  description: "Make UPI payment receipts, quotations and GST invoices in seconds. Free to start, no login needed. Built for Indian freelancers and small businesses.",
   keywords: [
     "GST invoice generator India",
     "free GST invoice maker",
@@ -39,8 +39,8 @@ export const metadata: Metadata = {
     canonical: "/",
   },
   openGraph: {
-    title: "Paavti — Free GST Invoice Generator for Indian Freelancers",
-    description: "Create GST-compliant invoices, quotes and track expenses in seconds. Free forever. UPI QR code included.",
+    title: "Paavti | Free UPI Receipt, Quotation & GST Invoice Maker",
+    description: "Make UPI payment receipts, quotations and GST invoices in seconds. Free to start, no login needed.",
     url: "https://paavti.com",
     siteName: "Paavti",
     locale: "en_IN",
@@ -48,8 +48,8 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "Paavti — Free GST Invoice Generator for Indian Freelancers",
-    description: "Create GST-compliant invoices, quotes and track expenses in seconds. Free forever. UPI QR code included.",
+    title: "Paavti | Free UPI Receipt, Quotation & GST Invoice Maker",
+    description: "Make UPI payment receipts, quotations and GST invoices in seconds. Free to start, no login needed.",
     creator: "@paavti",
   },
   robots: {
